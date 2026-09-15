@@ -1,0 +1,32 @@
+menu "ESP32-S3 Remote HID"
+
+config REMOTE_HID_WIFI_SSID
+    string "Wi-Fi SSID"
+    default ""
+    help
+        Wi-Fi station SSID. Keep credentials in sdkconfig.defaults.local.
+
+config REMOTE_HID_WIFI_PASSWORD
+    string "Wi-Fi password"
+    default ""
+    help
+        Wi-Fi station password. This value must not be committed.
+
+config REMOTE_HID_API_TOKEN
+    string "API bearer token"
+    default ""
+    help
+        Random token required by REST and WebSocket clients. This value must
+        not be committed.
+
+config REMOTE_HID_KEY_HOLD_TIMEOUT_MS
+    int "Maximum held-key inactivity timeout (ms)"
+    range 1000 600000
+    default 10000
+
+config REMOTE_HID_KEY_PRESS_DURATION_MS
+    int "Default key press duration (ms)"
+    range 1 1000
+    default 50
+
+endmenu

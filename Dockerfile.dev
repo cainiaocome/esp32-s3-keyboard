@@ -1,0 +1,7 @@
+FROM espressif/idf:v6.1
+
+WORKDIR /workspace
+COPY tests/requirements.txt /tmp/remote-hid-test-requirements.txt
+RUN python -m pip install --no-cache-dir -r /tmp/remote-hid-test-requirements.txt
+
+ENTRYPOINT ["/bin/bash"]
