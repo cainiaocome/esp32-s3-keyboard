@@ -27,15 +27,13 @@ struct KeyboardEngineConfig {
 };
 
 class KeyboardEngine {
-public:
-    KeyboardEngine(HidBackend& backend, Clock& clock,
-                   KeyboardEngineConfig config = {});
+  public:
+    KeyboardEngine(HidBackend& backend, Clock& clock, KeyboardEngineConfig config = {});
 
     EngineResult key_down(KeyCode key);
     EngineResult key_up(KeyCode key);
     EngineResult key_press(KeyCode key, uint64_t duration_ms = 0);
-    EngineResult combo(const KeyCode* keys, std::size_t count,
-                       uint64_t duration_ms = 0);
+    EngineResult combo(const KeyCode* keys, std::size_t count, uint64_t duration_ms = 0);
     EngineResult release_all();
 
     // Called periodically by the firmware task. It releases scheduled press
@@ -47,7 +45,7 @@ public:
     bool is_pressed(KeyCode key) const;
     uint64_t last_activity_ms() const;
 
-private:
+  private:
     static constexpr std::size_t kMaxPendingReleases = 16;
 
     struct PendingRelease {
@@ -62,6 +60,7 @@ private:
     bool add_key_locked(KeyCode key);
     void remove_key_locked(KeyCode key);
     bool schedule_release_locked(KeyCode key, uint64_t due_ms);
+    void cancel_pending_release_locked(KeyCode key);
     void clear_pending_releases_locked();
     void refresh_activity_locked(uint64_t now_ms);
     bool duration_valid(uint64_t duration_ms) const;
@@ -75,4 +74,4 @@ private:
     mutable std::mutex mutex_;
 };
 
-}  // namespace remote_hid
+} // namespace remote_hid

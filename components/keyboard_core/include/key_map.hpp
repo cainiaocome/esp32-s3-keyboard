@@ -12,4 +12,4 @@ bool key_from_name(const char* name, KeyCode& key);
 const char* key_name(KeyCode key);
 bool is_valid_key(KeyCode key);
 
-}  // namespace remote_hid
+} // namespace remote_hid

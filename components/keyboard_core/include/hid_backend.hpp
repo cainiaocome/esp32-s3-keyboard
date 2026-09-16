@@ -5,9 +5,9 @@
 namespace remote_hid {
 
 class HidBackend {
-public:
+  public:
     virtual ~HidBackend() = default;
     virtual bool send_report(const HidReport& report) = 0;
 };
 
-}  // namespace remote_hid
+} // namespace remote_hid

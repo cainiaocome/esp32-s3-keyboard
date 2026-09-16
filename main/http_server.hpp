@@ -19,15 +19,15 @@ struct StatusSnapshot {
 using StatusProvider = StatusSnapshot (*)(void* context);
 
 class HttpServer final {
-public:
-    HttpServer(KeyboardEngine& keyboard, const char* api_token,
-               StatusProvider status_provider, void* status_context);
+  public:
+    HttpServer(KeyboardEngine& keyboard, const char* api_token, StatusProvider status_provider,
+               void* status_context);
     ~HttpServer();
 
     bool start();
     void stop();
 
-private:
+  private:
     static constexpr std::size_t kMaxRequestBody = 1024;
     static constexpr uint64_t kMaxDurationMs = 1000;
 
@@ -54,11 +54,9 @@ private:
     bool read_json(httpd_req_t* req, cJSON*& root) const;
     bool parse_key(cJSON* root, KeyCode& key) const;
     bool parse_duration(cJSON* root, uint64_t& duration_ms) const;
-    bool send_error(httpd_req_t* req, int status, const char* error,
-                    const char* message) const;
+    bool send_error(httpd_req_t* req, int status, const char* error, const char* message) const;
     bool send_success(httpd_req_t* req) const;
-    bool send_ws_error(httpd_req_t* req, const char* error,
-                       const char* message) const;
+    bool send_ws_error(httpd_req_t* req, const char* error, const char* message) const;
     bool send_ws_success(httpd_req_t* req) const;
     bool send_ws_json(httpd_req_t* req, const char* json) const;
     bool dispatch_websocket_message(httpd_req_t* req, cJSON* root);
@@ -70,4 +68,4 @@ private:
     httpd_handle_t server_ = nullptr;
 };
 
-}  // namespace remote_hid
+} // namespace remote_hid

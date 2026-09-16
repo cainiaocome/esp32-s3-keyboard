@@ -113,22 +113,17 @@ enum class KeyCode : uint8_t {
     RIGHT_GUI,
 };
 
-constexpr uint8_t key_usage(KeyCode key)
-{
-    return static_cast<uint8_t>(key);
-}
+constexpr uint8_t key_usage(KeyCode key) { return static_cast<uint8_t>(key); }
 
-constexpr bool is_modifier(KeyCode key)
-{
+constexpr bool is_modifier(KeyCode key) {
     const uint8_t usage = key_usage(key);
-    return usage >= key_usage(KeyCode::LEFT_CTRL) &&
-           usage <= key_usage(KeyCode::RIGHT_GUI);
+    return usage >= key_usage(KeyCode::LEFT_CTRL) && usage <= key_usage(KeyCode::RIGHT_GUI);
 }
 
-constexpr uint8_t modifier_bit(KeyCode key)
-{
-    return is_modifier(key) ? static_cast<uint8_t>(1U <<
-        (key_usage(key) - key_usage(KeyCode::LEFT_CTRL))) : 0;
+constexpr uint8_t modifier_bit(KeyCode key) {
+    return is_modifier(key)
+               ? static_cast<uint8_t>(1U << (key_usage(key) - key_usage(KeyCode::LEFT_CTRL)))
+               : 0;
 }
 
-}  // namespace remote_hid
+} // namespace remote_hid

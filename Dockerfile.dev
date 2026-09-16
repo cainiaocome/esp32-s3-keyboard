@@ -1,7 +1,9 @@
 FROM espressif/idf:v6.1
 
 WORKDIR /workspace
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends clang-format \
+    && rm -rf /var/lib/apt/lists/*
 COPY tests/requirements.txt /tmp/remote-hid-test-requirements.txt
-RUN python -m pip install --no-cache-dir -r /tmp/remote-hid-test-requirements.txt
-
-ENTRYPOINT ["/bin/bash"]
+RUN /opt/esp/python_env/idf6.1_py3.12_env/bin/python -m pip install \
+    --no-cache-dir -r /tmp/remote-hid-test-requirements.txt

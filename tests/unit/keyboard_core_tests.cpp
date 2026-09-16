@@ -7,26 +7,25 @@
 
 #include "clock.hpp"
 #include "hid_backend.hpp"
-#include "keyboard_engine.hpp"
 #include "key_map.hpp"
+#include "keyboard_engine.hpp"
 
 using namespace remote_hid;
 
 namespace {
 
 class FakeClock final : public Clock {
-public:
+  public:
     uint64_t now_ms() const override { return now_; }
     void advance_ms(uint64_t amount) { now_ += amount; }
 
-private:
+  private:
     uint64_t now_ = 0;
 };
 
 class FakeHidBackend final : public HidBackend {
-public:
-    bool send_report(const HidReport& report) override
-    {
+  public:
+    bool send_report(const HidReport& report) override {
         reports.push_back(report);
         return !fail;
     }
@@ -35,16 +34,14 @@ public:
     std::vector<HidReport> reports;
 };
 
-void expect(bool condition, const char* message)
-{
+void expect(bool condition, const char* message) {
     if (!condition) {
         std::cerr << "FAIL: " << message << '\n';
         std::exit(1);
     }
 }
 
-HidReport expected(uint8_t modifiers, std::initializer_list<uint8_t> keys)
-{
+HidReport expected(uint8_t modifiers, std::initializer_list<uint8_t> keys) {
     HidReport report;
     report.modifiers = modifiers;
     std::size_t index = 0;
@@ -54,8 +51,7 @@ HidReport expected(uint8_t modifiers, std::initializer_list<uint8_t> keys)
     return report;
 }
 
-void test_key_map()
-{
+void test_key_map() {
     KeyCode key{};
     expect(key_from_name("a", key) && key == KeyCode::A, "maps letters case-insensitively");
     expect(key_from_name("7", key) && key == KeyCode::DIGIT_7, "maps digits");
@@ -66,8 +62,7 @@ void test_key_map()
     expect(!key_from_name("not-a-key", key), "rejects unknown key");
 }
 
-void test_down_up_and_idempotence()
-{
+void test_down_up_and_idempotence() {
     FakeClock clock;
     FakeHidBackend backend;
     KeyboardEngine engine(backend, clock);
@@ -84,8 +79,7 @@ void test_down_up_and_idempotence()
     expect(backend.reports.size() == after_up, "repeated up is a no-op");
 }
 
-void test_press_is_non_blocking_and_completes()
-{
+void test_press_is_non_blocking_and_completes() {
     FakeClock clock;
     FakeHidBackend backend;
     KeyboardEngineConfig config;
@@ -103,10 +97,17 @@ void test_press_is_non_blocking_and_completes()
     clock.advance_ms(1);
     engine.tick();
     expect(backend.reports.back() == HidReport{}, "press sends release at due time");
+
+    expect(engine.key_press(KeyCode::A, 50) == EngineResult::kOk, "second press succeeds");
+    expect(engine.key_down(KeyCode::A) == EngineResult::kOk,
+           "explicit hold can take over a scheduled press");
+    clock.advance_ms(50);
+    engine.tick();
+    expect(engine.is_pressed(KeyCode::A), "explicit hold is not released by old press timer");
+    expect(engine.key_up(KeyCode::A) == EngineResult::kOk, "explicit hold releases normally");
 }
 
-void test_modifiers_and_ctrl_c()
-{
+void test_modifiers_and_ctrl_c() {
     FakeClock clock;
     FakeHidBackend backend;
     KeyboardEngine engine(backend, clock);
@@ -127,8 +128,7 @@ void test_modifiers_and_ctrl_c()
     expect(backend.reports.back() == HidReport{}, "Ctrl+C sequence ends empty");
 }
 
-void test_combo_and_release_all()
-{
+void test_combo_and_release_all() {
     FakeClock clock;
     FakeHidBackend backend;
     KeyboardEngine engine(backend, clock);
@@ -145,8 +145,7 @@ void test_combo_and_release_all()
     expect(backend.reports.back() == HidReport{}, "release-all emits empty barrier report");
 }
 
-void test_timeout_and_invalid_input()
-{
+void test_timeout_and_invalid_input() {
     FakeClock clock;
     FakeHidBackend backend;
     KeyboardEngineConfig config;
@@ -168,14 +167,12 @@ void test_timeout_and_invalid_input()
     expect(backend.reports.back() == HidReport{}, "timeout emits empty report");
 }
 
-void test_rollover_and_backend_failure()
-{
+void test_rollover_and_backend_failure() {
     FakeClock clock;
     FakeHidBackend backend;
     KeyboardEngine engine(backend, clock);
-    const std::array<KeyCode, 7> keys = {KeyCode::A, KeyCode::B, KeyCode::C,
-                                         KeyCode::D, KeyCode::E, KeyCode::F,
-                                         KeyCode::G};
+    const std::array<KeyCode, 7> keys = {KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D,
+                                         KeyCode::E, KeyCode::F, KeyCode::G};
     for (std::size_t i = 0; i < 6; ++i) {
         expect(engine.key_down(keys[i]) == EngineResult::kOk, "six-key rollover accepts six keys");
     }
@@ -189,11 +186,11 @@ void test_rollover_and_backend_failure()
            "backend failure is returned");
     expect(engine.is_pressed(KeyCode::Z), "logical state remains authoritative after send failure");
     backend.fail = false;
-    expect(engine.key_up(KeyCode::Z) == EngineResult::kOk, "recovery can release failed report state");
+    expect(engine.key_up(KeyCode::Z) == EngineResult::kOk,
+           "recovery can release failed report state");
 }
 
-void test_status_order_and_duration_validation()
-{
+void test_status_order_and_duration_validation() {
     FakeClock clock;
     FakeHidBackend backend;
     KeyboardEngine engine(backend, clock);
@@ -202,16 +199,15 @@ void test_status_order_and_duration_validation()
     std::array<KeyCode, 8> pressed{};
     const std::size_t count = engine.pressed_keys(pressed.data(), pressed.size());
     expect(count == 2, "status count");
-    expect(pressed[0] == KeyCode::A && pressed[1] == KeyCode::LEFT_ALT,
+    expect(pressed[0] == KeyCode::LEFT_ALT && pressed[1] == KeyCode::A,
            "status exposes deterministic key order");
     expect(engine.key_press(KeyCode::B, 1001) == EngineResult::kInvalidArgument,
            "long press rejected");
 }
 
-}  // namespace
+} // namespace
 
-int main()
-{
+int main() {
     test_key_map();
     test_down_up_and_idempotence();
     test_press_is_non_blocking_and_completes();

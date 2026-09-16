@@ -1,0 +1,11 @@
+.git
+.git-crypt
+.env
+build
+managed_components
+sdkconfig
+sdkconfig.defaults.local
+tmp
+markdown-for-ai
+claude-code-review-result
+reference-repos

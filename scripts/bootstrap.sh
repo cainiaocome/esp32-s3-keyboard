@@ -25,6 +25,8 @@ fi
 if command -v idf.py >/dev/null 2>&1; then
     echo "ESP-IDF: $(idf.py --version 2>/dev/null || true)"
     echo "Target: ${IDF_TARGET:-esp32s3}"
+    make config
+    idf.py reconfigure
 else
     echo "idf.py: not found; firmware build remains unavailable until ESP-IDF v6.1 is active."
 fi

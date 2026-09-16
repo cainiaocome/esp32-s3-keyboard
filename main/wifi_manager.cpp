@@ -14,12 +14,9 @@ constexpr char kTag[] = "remote_hid_wifi";
 }
 
 WifiManager::WifiManager(const AppConfig& config, KeyboardEngine& keyboard)
-    : config_(config), keyboard_(keyboard)
-{
-}
+    : config_(config), keyboard_(keyboard) {}
 
-bool WifiManager::start()
-{
+bool WifiManager::start() {
     if (started_) {
         return true;
     }
@@ -44,24 +41,36 @@ bool WifiManager::start()
     }
 
     wifi_init_config_t init_config = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_init(&init_config));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_register(
-        WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::event_handler, this));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_register(
-        IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiManager::event_handler, this));
+    result = esp_wifi_init(&init_config);
+    if (result != ESP_OK) {
+        ESP_LOGE(kTag, "Failed to initialize Wi-Fi: %s", esp_err_to_name(result));
+        return false;
+    }
+    result =
+        esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WifiManager::event_handler, this);
+    if (result != ESP_OK) {
+        ESP_LOGE(kTag, "Failed to register Wi-Fi event handler: %s", esp_err_to_name(result));
+        return false;
+    }
+    result = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &WifiManager::event_handler,
+                                        this);
+    if (result != ESP_OK) {
+        ESP_LOGE(kTag, "Failed to register IP event handler: %s", esp_err_to_name(result));
+        return false;
+    }
 
     wifi_config_t wifi_config = {};
     std::strncpy(reinterpret_cast<char*>(wifi_config.sta.ssid), config_.wifi_ssid,
                  sizeof(wifi_config.sta.ssid) - 1);
-    std::strncpy(reinterpret_cast<char*>(wifi_config.sta.password), config_.wifi_password,
+    const char* password = config_.wifi_password == nullptr ? "" : config_.wifi_password;
+    std::strncpy(reinterpret_cast<char*>(wifi_config.sta.password), password,
                  sizeof(wifi_config.sta.password) - 1);
     wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
     wifi_config.sta.pmf_cfg.capable = true;
     wifi_config.sta.pmf_cfg.required = false;
 
     if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK ||
-        esp_wifi_set_config(WIFI_IF_STA, &wifi_config) != ESP_OK ||
-        esp_wifi_start() != ESP_OK) {
+        esp_wifi_set_config(WIFI_IF_STA, &wifi_config) != ESP_OK || esp_wifi_start() != ESP_OK) {
         ESP_LOGE(kTag, "Failed to start Wi-Fi station");
         return false;
     }
@@ -70,15 +79,12 @@ bool WifiManager::start()
     return true;
 }
 
-void WifiManager::event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
-{
+void WifiManager::event_handler(void* arg, esp_event_base_t event_base, int32_t event_id,
+                                void* event_data) {
     static_cast<WifiManager*>(arg)->on_event(event_base, event_id, event_data);
 }
 
-void WifiManager::on_event(esp_event_base_t event_base, int32_t event_id,
-                           void* event_data)
-{
+void WifiManager::on_event(esp_event_base_t event_base, int32_t event_id, void* event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
         return;
@@ -98,4 +104,4 @@ void WifiManager::on_event(esp_event_base_t event_base, int32_t event_id,
     }
 }
 
-}  // namespace remote_hid
+} // namespace remote_hid

@@ -10,17 +10,16 @@
 namespace remote_hid {
 
 class WifiManager final {
-public:
+  public:
     WifiManager(const AppConfig& config, KeyboardEngine& keyboard);
 
     bool start();
     bool connected() const { return connected_.load(); }
 
-private:
-    static void event_handler(void* arg, esp_event_base_t event_base,
-                              int32_t event_id, void* event_data);
-    void on_event(esp_event_base_t event_base, int32_t event_id,
-                  void* event_data);
+  private:
+    static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id,
+                              void* event_data);
+    void on_event(esp_event_base_t event_base, int32_t event_id, void* event_data);
 
     const AppConfig& config_;
     KeyboardEngine& keyboard_;
@@ -28,4 +27,4 @@ private:
     bool started_ = false;
 };
 
-}  // namespace remote_hid
+} // namespace remote_hid

@@ -5,13 +5,13 @@
 namespace remote_hid {
 
 class TinyUsbHidBackend final : public HidBackend {
-public:
+  public:
     bool begin();
     bool send_report(const HidReport& report) override;
     bool mounted() const;
 
-private:
+  private:
     bool initialized_ = false;
 };
 
-}  // namespace remote_hid
+} // namespace remote_hid

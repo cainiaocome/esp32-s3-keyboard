@@ -4,8 +4,7 @@
 
 namespace remote_hid {
 
-AppConfig load_app_config()
-{
+AppConfig load_app_config() {
     return {
         CONFIG_REMOTE_HID_WIFI_SSID,
         CONFIG_REMOTE_HID_WIFI_PASSWORD,
@@ -15,4 +14,4 @@ AppConfig load_app_config()
     };
 }
 
-}  // namespace remote_hid
+} // namespace remote_hid

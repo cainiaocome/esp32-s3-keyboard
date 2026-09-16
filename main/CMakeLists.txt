@@ -15,4 +15,5 @@ idf_component_register(
         nvs_flash
         usb_hid
         keyboard_core
+    KCONFIG_PROJBUILD "${CMAKE_CURRENT_LIST_DIR}/Kconfig.projbuild"
 )

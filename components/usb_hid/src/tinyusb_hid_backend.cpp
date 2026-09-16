@@ -21,31 +21,24 @@ const uint8_t kHidReportDescriptor[] = {
 
 const char kLanguageDescriptor[] = {0x09, 0x04};
 const char* kStringDescriptor[] = {
-    kLanguageDescriptor,
-    "Remote HID",
-    "ESP32-S3 Remote Keyboard",
-    "00000001",
-    "Keyboard",
+    kLanguageDescriptor, "Remote HID", "ESP32-S3 Remote Keyboard", "00000001", "Keyboard",
 };
 
 const uint8_t kConfigurationDescriptor[] = {
-    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN,
-                          TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
+    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
     TUD_HID_DESCRIPTOR(0, 4, true, sizeof(kHidReportDescriptor), 0x81, 16, 10),
 };
 
-}  // namespace
+} // namespace
 
-uint8_t const* tud_hid_descriptor_report_cb(uint8_t instance)
-{
+extern "C" uint8_t const* tud_hid_descriptor_report_cb(uint8_t instance) {
     (void)instance;
     return kHidReportDescriptor;
 }
 
-uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
-                               hid_report_type_t report_type, uint8_t* buffer,
-                               uint16_t reqlen)
-{
+extern "C" uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
+                                          hid_report_type_t report_type, uint8_t* buffer,
+                                          uint16_t reqlen) {
     (void)instance;
     (void)report_id;
     (void)report_type;
@@ -54,10 +47,9 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
     return 0;
 }
 
-void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
-                           hid_report_type_t report_type,
-                           uint8_t const* buffer, uint16_t bufsize)
-{
+extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
+                                      hid_report_type_t report_type, uint8_t const* buffer,
+                                      uint16_t bufsize) {
     (void)instance;
     (void)report_id;
     (void)report_type;
@@ -65,8 +57,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
     (void)bufsize;
 }
 
-bool TinyUsbHidBackend::begin()
-{
+bool TinyUsbHidBackend::begin() {
     if (initialized_) {
         return true;
     }
@@ -74,8 +65,7 @@ bool TinyUsbHidBackend::begin()
     config.descriptor.device = nullptr;
     config.descriptor.full_speed_config = kConfigurationDescriptor;
     config.descriptor.string = kStringDescriptor;
-    config.descriptor.string_count =
-        sizeof(kStringDescriptor) / sizeof(kStringDescriptor[0]);
+    config.descriptor.string_count = sizeof(kStringDescriptor) / sizeof(kStringDescriptor[0]);
 #if (TUD_OPT_HIGH_SPEED)
     config.descriptor.high_speed_config = kConfigurationDescriptor;
 #endif
@@ -90,20 +80,15 @@ bool TinyUsbHidBackend::begin()
     return true;
 }
 
-bool TinyUsbHidBackend::send_report(const HidReport& report)
-{
+bool TinyUsbHidBackend::send_report(const HidReport& report) {
     if (!initialized_ || !tud_mounted()) {
         return false;
     }
     uint8_t keycodes[kHidKeySlots] = {};
     std::copy(report.keys.begin(), report.keys.end(), keycodes);
-    return tud_hid_keyboard_report(HID_ITF_PROTOCOL_KEYBOARD,
-                                   report.modifiers, keycodes);
+    return tud_hid_keyboard_report(HID_ITF_PROTOCOL_KEYBOARD, report.modifiers, keycodes);
 }
 
-bool TinyUsbHidBackend::mounted() const
-{
-    return initialized_ && tud_mounted();
-}
+bool TinyUsbHidBackend::mounted() const { return initialized_ && tud_mounted(); }
 
-}  // namespace remote_hid
+} // namespace remote_hid

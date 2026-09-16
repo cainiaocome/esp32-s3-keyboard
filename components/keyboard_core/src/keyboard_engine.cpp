@@ -6,36 +6,27 @@
 
 namespace remote_hid {
 
-KeyboardEngine::KeyboardEngine(HidBackend& backend, Clock& clock,
-                               KeyboardEngineConfig config)
-    : backend_(backend), clock_(clock), config_(config),
-      last_activity_ms_(clock.now_ms())
-{
-    if (config_.max_press_duration_ms == 0 ||
-        config_.max_press_duration_ms > 1000) {
+KeyboardEngine::KeyboardEngine(HidBackend& backend, Clock& clock, KeyboardEngineConfig config)
+    : backend_(backend), clock_(clock), config_(config), last_activity_ms_(clock.now_ms()) {
+    if (config_.max_press_duration_ms == 0 || config_.max_press_duration_ms > 1000) {
         config_.max_press_duration_ms = 1000;
     }
     if (config_.default_press_duration_ms == 0 ||
         config_.default_press_duration_ms > config_.max_press_duration_ms) {
-        config_.default_press_duration_ms =
-            std::min<uint64_t>(50, config_.max_press_duration_ms);
+        config_.default_press_duration_ms = std::min<uint64_t>(50, config_.max_press_duration_ms);
     }
     if (config_.max_hold_time_ms == 0) {
         config_.max_hold_time_ms = 10000;
     }
 }
 
-bool KeyboardEngine::has_key_locked(KeyCode key) const
-{
+bool KeyboardEngine::has_key_locked(KeyCode key) const {
     return std::any_of(report_.keys.begin(), report_.keys.end(),
-                       [key](uint8_t usage) {
-                           return usage == key_usage(key);
-                       }) ||
+                       [key](uint8_t usage) { return usage == key_usage(key); }) ||
            (is_modifier(key) && (report_.modifiers & modifier_bit(key)) != 0);
 }
 
-bool KeyboardEngine::add_key_locked(KeyCode key)
-{
+bool KeyboardEngine::add_key_locked(KeyCode key) {
     if (is_modifier(key)) {
         report_.modifiers = static_cast<uint8_t>(report_.modifiers | modifier_bit(key));
         return true;
@@ -49,11 +40,9 @@ bool KeyboardEngine::add_key_locked(KeyCode key)
     return false;
 }
 
-void KeyboardEngine::remove_key_locked(KeyCode key)
-{
+void KeyboardEngine::remove_key_locked(KeyCode key) {
     if (is_modifier(key)) {
-        report_.modifiers = static_cast<uint8_t>(report_.modifiers &
-                                                  ~modifier_bit(key));
+        report_.modifiers = static_cast<uint8_t>(report_.modifiers & ~modifier_bit(key));
         return;
     }
     for (uint8_t& usage : report_.keys) {
@@ -67,24 +56,17 @@ void KeyboardEngine::remove_key_locked(KeyCode key)
                           [](uint8_t usage) { return usage != 0; });
 }
 
-EngineResult KeyboardEngine::send_current_report_locked()
-{
-    return backend_.send_report(report_) ? EngineResult::kOk
-                                          : EngineResult::kBackendFailure;
+EngineResult KeyboardEngine::send_current_report_locked() {
+    return backend_.send_report(report_) ? EngineResult::kOk : EngineResult::kBackendFailure;
 }
 
-void KeyboardEngine::refresh_activity_locked(uint64_t now_ms)
-{
-    last_activity_ms_ = now_ms;
-}
+void KeyboardEngine::refresh_activity_locked(uint64_t now_ms) { last_activity_ms_ = now_ms; }
 
-bool KeyboardEngine::duration_valid(uint64_t duration_ms) const
-{
+bool KeyboardEngine::duration_valid(uint64_t duration_ms) const {
     return duration_ms > 0 && duration_ms <= config_.max_press_duration_ms;
 }
 
-EngineResult KeyboardEngine::set_key_locked(KeyCode key, bool pressed)
-{
+EngineResult KeyboardEngine::set_key_locked(KeyCode key, bool pressed) {
     if (!is_valid_key(key)) {
         return EngineResult::kInvalidKey;
     }
@@ -107,20 +89,19 @@ EngineResult KeyboardEngine::set_key_locked(KeyCode key, bool pressed)
     return send_current_report_locked();
 }
 
-EngineResult KeyboardEngine::key_down(KeyCode key)
-{
+EngineResult KeyboardEngine::key_down(KeyCode key) {
     std::lock_guard<std::mutex> lock(mutex_);
+    cancel_pending_release_locked(key);
     return set_key_locked(key, true);
 }
 
-EngineResult KeyboardEngine::key_up(KeyCode key)
-{
+EngineResult KeyboardEngine::key_up(KeyCode key) {
     std::lock_guard<std::mutex> lock(mutex_);
+    cancel_pending_release_locked(key);
     return set_key_locked(key, false);
 }
 
-bool KeyboardEngine::schedule_release_locked(KeyCode key, uint64_t due_ms)
-{
+bool KeyboardEngine::schedule_release_locked(KeyCode key, uint64_t due_ms) {
     for (PendingRelease& pending : pending_releases_) {
         if (!pending.active) {
             pending = PendingRelease{key, due_ms, true};
@@ -130,15 +111,21 @@ bool KeyboardEngine::schedule_release_locked(KeyCode key, uint64_t due_ms)
     return false;
 }
 
-void KeyboardEngine::clear_pending_releases_locked()
-{
+void KeyboardEngine::cancel_pending_release_locked(KeyCode key) {
+    for (PendingRelease& pending : pending_releases_) {
+        if (pending.active && pending.key == key) {
+            pending.active = false;
+        }
+    }
+}
+
+void KeyboardEngine::clear_pending_releases_locked() {
     for (PendingRelease& pending : pending_releases_) {
         pending.active = false;
     }
 }
 
-EngineResult KeyboardEngine::key_press(KeyCode key, uint64_t duration_ms)
-{
+EngineResult KeyboardEngine::key_press(KeyCode key, uint64_t duration_ms) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!is_valid_key(key)) {
         return EngineResult::kInvalidKey;
@@ -157,22 +144,18 @@ EngineResult KeyboardEngine::key_press(KeyCode key, uint64_t duration_ms)
     }
 
     const EngineResult down_result = set_key_locked(key, true);
-    if (down_result != EngineResult::kOk &&
-        down_result != EngineResult::kBackendFailure) {
+    if (down_result != EngineResult::kOk && down_result != EngineResult::kBackendFailure) {
         return down_result;
     }
     if (!schedule_release_locked(key, clock_.now_ms() + duration_ms)) {
         remove_key_locked(key);
-        clear_pending_releases_locked();
         send_current_report_locked();
         return EngineResult::kQueueFull;
     }
     return down_result;
 }
 
-EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count,
-                                   uint64_t duration_ms)
-{
+EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count, uint64_t duration_ms) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (keys == nullptr || count == 0 || count > kHidKeySlots) {
         return EngineResult::kInvalidArgument;
@@ -197,13 +180,13 @@ EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count,
 
     std::array<KeyCode, kHidKeySlots> newly_pressed{};
     std::size_t newly_pressed_count = 0;
+    bool backend_failure = false;
     for (std::size_t i = 0; i < count; ++i) {
         if (has_key_locked(keys[i])) {
             continue;
         }
         if (!is_modifier(keys[i]) &&
-            std::count_if(newly_pressed.begin(),
-                          newly_pressed.begin() + newly_pressed_count,
+            std::count_if(newly_pressed.begin(), newly_pressed.begin() + newly_pressed_count,
                           [](KeyCode key) { return !is_modifier(key); }) >=
                 static_cast<long>(kHidKeySlots)) {
             return EngineResult::kRollover;
@@ -215,6 +198,7 @@ EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count,
             send_current_report_locked();
             return result;
         }
+        backend_failure = backend_failure || result == EngineResult::kBackendFailure;
         newly_pressed[newly_pressed_count++] = keys[i];
     }
 
@@ -233,11 +217,10 @@ EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count,
         }
     }
     refresh_activity_locked(clock_.now_ms());
-    return EngineResult::kOk;
+    return backend_failure ? EngineResult::kBackendFailure : EngineResult::kOk;
 }
 
-EngineResult KeyboardEngine::release_all()
-{
+EngineResult KeyboardEngine::release_all() {
     std::lock_guard<std::mutex> lock(mutex_);
     report_ = HidReport{};
     clear_pending_releases_locked();
@@ -247,8 +230,7 @@ EngineResult KeyboardEngine::release_all()
     return send_current_report_locked();
 }
 
-void KeyboardEngine::tick()
-{
+void KeyboardEngine::tick() {
     std::lock_guard<std::mutex> lock(mutex_);
     const uint64_t now_ms = clock_.now_ms();
     bool changed = false;
@@ -275,16 +257,22 @@ void KeyboardEngine::tick()
     }
 }
 
-HidReport KeyboardEngine::report() const
-{
+HidReport KeyboardEngine::report() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return report_;
 }
 
-std::size_t KeyboardEngine::pressed_keys(KeyCode* output, std::size_t capacity) const
-{
+std::size_t KeyboardEngine::pressed_keys(KeyCode* output, std::size_t capacity) const {
     std::lock_guard<std::mutex> lock(mutex_);
     std::size_t count = 0;
+    for (uint8_t bit = 0; bit < 8; ++bit) {
+        if ((report_.modifiers & (1U << bit)) != 0) {
+            if (count < capacity && output != nullptr) {
+                output[count] = static_cast<KeyCode>(key_usage(KeyCode::LEFT_CTRL) + bit);
+            }
+            ++count;
+        }
+    }
     for (uint8_t usage : report_.keys) {
         if (usage != 0 && count < capacity && output != nullptr) {
             output[count] = static_cast<KeyCode>(usage);
@@ -293,28 +281,17 @@ std::size_t KeyboardEngine::pressed_keys(KeyCode* output, std::size_t capacity) 
             ++count;
         }
     }
-    for (uint8_t bit = 0; bit < 8; ++bit) {
-        if ((report_.modifiers & (1U << bit)) != 0) {
-            if (count < capacity && output != nullptr) {
-                output[count] = static_cast<KeyCode>(
-                    key_usage(KeyCode::LEFT_CTRL) + bit);
-            }
-            ++count;
-        }
-    }
     return count;
 }
 
-bool KeyboardEngine::is_pressed(KeyCode key) const
-{
+bool KeyboardEngine::is_pressed(KeyCode key) const {
     std::lock_guard<std::mutex> lock(mutex_);
     return has_key_locked(key);
 }
 
-uint64_t KeyboardEngine::last_activity_ms() const
-{
+uint64_t KeyboardEngine::last_activity_ms() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return last_activity_ms_;
 }
 
-}  // namespace remote_hid
+} // namespace remote_hid

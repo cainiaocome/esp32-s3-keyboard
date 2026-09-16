@@ -14,4 +14,4 @@ struct AppConfig {
 
 AppConfig load_app_config();
 
-}  // namespace remote_hid
+} // namespace remote_hid

@@ -8,17 +8,22 @@ an explicit optional hardware path.
 
 ## State
 
-- In progress: initial ESP-IDF project, keyboard core, USB adapter, network
-  adapters, developer tooling, and tests.
+- Implemented: ESP-IDF project, keyboard core, USB adapter, Wi-Fi/REST/
+  WebSocket adapters, developer tooling, CI, and optional hardware API tests.
 - Baseline: ESP-IDF `v6.1`; the official `tusb_hid` example uses
   `espressif/esp_tinyusb` `^2.0.1~1`.
 
-## Remaining validation
+## Validation
 
-- Run host unit/integration tests and formatting/lint checks.
-- Build firmware with the pinned ESP-IDF Docker image if available.
-- Commit and push the completed implementation to the configured GitHub
-  remote.
+- Host `make test`: passed using the g++ fallback (core) and pytest (2
+  integration tests; 1 hardware test deselected).
+- Pinned development image: built successfully and `make test` passed using
+  CMake (1 C++ test executable and 2 integration tests).
+- ESP-IDF `v6.1` target build: passed for ESP32-S3; generated image is within
+  the 1 MiB factory partition.
+- clang-format was applied to all C/C++ sources in the development image.
+- Remaining validation requires a physical ESP32-S3: flash, Wi-Fi/API smoke
+  test, USB enumeration, and Linux host HID event observation.
 
 ## Constraints / decisions
 

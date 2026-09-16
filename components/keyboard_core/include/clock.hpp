@@ -5,9 +5,9 @@
 namespace remote_hid {
 
 class Clock {
-public:
+  public:
     virtual ~Clock() = default;
     virtual uint64_t now_ms() const = 0;
 };
 
-}  // namespace remote_hid
+} // namespace remote_hid

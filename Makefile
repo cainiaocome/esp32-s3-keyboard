@@ -7,11 +7,7 @@ HOST_BUILD_DIR ?= build/host
 ENV_FILE ?= .env
 LOCAL_SDKCONFIG ?= sdkconfig.defaults.local
 
-ifeq ($(wildcard $(LOCAL_SDKCONFIG)),)
-SDKCONFIG_DEFAULTS := sdkconfig.defaults
-else
-SDKCONFIG_DEFAULTS := sdkconfig.defaults;$(LOCAL_SDKCONFIG)
-endif
+SDKCONFIG_DEFAULTS = sdkconfig.defaults$(if $(wildcard $(LOCAL_SDKCONFIG)),;$(LOCAL_SDKCONFIG))
 
 export IDF_TARGET
 export SDKCONFIG_DEFAULTS
@@ -53,9 +49,21 @@ clean:
 test: test-unit test-integration
 
 test-unit:
-	cmake -S tests/unit -B $(HOST_BUILD_DIR)
-	cmake --build $(HOST_BUILD_DIR)
-	ctest --test-dir $(HOST_BUILD_DIR) --output-on-failure
+	@if command -v cmake >/dev/null 2>&1; then \
+		cmake -S tests/unit -B $(HOST_BUILD_DIR) && \
+		cmake --build $(HOST_BUILD_DIR) && \
+		ctest --test-dir $(HOST_BUILD_DIR) --output-on-failure; \
+	else \
+		echo "cmake not found; using the g++ host-test fallback."; \
+		mkdir -p $(HOST_BUILD_DIR); \
+		g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror \
+			-Icomponents/keyboard_core/include \
+			tests/unit/keyboard_core_tests.cpp \
+			components/keyboard_core/src/key_map.cpp \
+			components/keyboard_core/src/keyboard_engine.cpp \
+			-o $(HOST_BUILD_DIR)/keyboard_core_tests && \
+		$(HOST_BUILD_DIR)/keyboard_core_tests; \
+	fi
 
 test-integration:
 	$(IDF_PYTHON) -m pytest -m "not hardware"
@@ -79,5 +87,4 @@ format:
 
 lint:
 	$(IDF_PYTHON) -m py_compile scripts/generate_sdkconfig.py tests/integration/test_config.py
-	cmake -S tests/unit -B $(HOST_BUILD_DIR)
-	cmake --build $(HOST_BUILD_DIR)
+	$(MAKE) test-unit
