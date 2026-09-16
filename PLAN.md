@@ -17,7 +17,7 @@ an explicit optional hardware path.
 
 ## Validation
 
-- Host `make test`: passed using the g++ fallback (core) and pytest (12
+- Host `make test`: passed using the g++ fallback (core) and pytest (13
   non-hardware integration tests; 4 hardware tests deselected).
 - Development image: based on ESP-IDF `v6.1`, preinstalls all project tools
   and test dependencies, and is consumed by Compose from GHCR with branch and
@@ -50,6 +50,9 @@ an explicit optional hardware path.
   and async WebSocket interfaces, local HTTP/WebSocket contract tests, package
   wheel validation in CI, `docs/PYTHON_CLIENT.md`, and the corresponding
   documentation rule in `AGENTS.md`.
+- Client organization follow-up complete: moved package metadata, library, and
+  debug sequence helper under `client/`; updated Makefile/CI package paths and
+  added `client/send_keys.py` plus the `remote-hid-send` console entry point.
 
 ## Constraints / decisions
 

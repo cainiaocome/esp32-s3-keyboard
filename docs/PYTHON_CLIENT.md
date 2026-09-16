@@ -20,19 +20,23 @@ The client requires Python 3.10 or newer. From a checkout of this repository:
 ```bash
 python -m venv .venv
 . .venv/bin/activate
-python -m pip install .
+python -m pip install ./client
 ```
 
 For a local editable install while developing the client:
 
 ```bash
-python -m pip install -e .
+python -m pip install -e ./client
 ```
 
 The REST client uses Python's standard-library HTTP implementation. The
 WebSocket client depends on `websockets` 15.x, which is installed by the
 package. The repository's Docker development image already contains this
 dependency.
+
+The installable package, its `pyproject.toml`, and the debug helper are kept
+together under `client/`; the repository root does not contain Python package
+metadata.
 
 ## Device configuration
 
@@ -222,3 +226,50 @@ make test-hardware PORT=/dev/ttyACM0
 
 Hardware tests should be run only when the ESP32 is connected and the target
 USB host is ready to receive keyboard input.
+
+## Debug sequence helper
+
+The repository includes a small helper that sends complete `press` commands
+for positional key arguments in the order given. It is useful for quickly
+checking the network/API path without writing a Python program. The token is
+read from `REMOTE_HID_API_TOKEN` first, then `API_TOKEN`, or can be supplied
+with `--token`.
+
+From the repository root, without installing the package:
+
+```bash
+REMOTE_HID_API_TOKEN="$API_TOKEN" \
+python client/send_keys.py \
+  --ip 192.168.1.42 \
+  ENTER A B
+```
+
+After installing the client, the equivalent console command is:
+
+```bash
+REMOTE_HID_API_TOKEN="$API_TOKEN" \
+remote-hid-send --ip 192.168.1.42 ENTER A B
+```
+
+Useful options:
+
+- `--duration-ms 75` overrides the device's default press duration;
+- `--delay-ms 100` waits between each press command;
+- `--timeout 10` changes the per-request timeout;
+- `--token VALUE` supplies the token directly, though an environment variable
+  avoids putting it in shell history.
+
+Example with an explicit interval:
+
+```bash
+python client/send_keys.py \
+  --ip 192.168.1.42 \
+  --duration-ms 75 \
+  --delay-ms 100 \
+  F1 F2 F3
+```
+
+The helper reports progress but never prints the token. It returns exit code 1
+for invalid local input, an API rejection, or an unreachable device. It uses
+REST `press`, so WebSocket-only interactive key-down/up behavior should use
+the Python API shown above.

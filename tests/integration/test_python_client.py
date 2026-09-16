@@ -11,6 +11,7 @@ from remote_hid_client import (
     RemoteHIDError,
     RemoteHIDProtocolError,
 )
+from remote_hid_client import cli
 
 
 class ApiHandler(BaseHTTPRequestHandler):
@@ -178,6 +179,41 @@ def test_status_protocol_errors_are_reported(http_server):
     finally:
         server.shutdown()
         thread.join()
+
+
+def test_debug_helper_sends_keys_in_order(monkeypatch, capsys):
+    calls = []
+
+    class FakeClient:
+        def __init__(self, base_url, token, *, timeout):
+            calls.append(("init", base_url, token, timeout))
+
+        def press(self, key, *, duration_ms=None):
+            calls.append(("press", key, duration_ms))
+
+    monkeypatch.setattr(cli, "RemoteHIDClient", FakeClient)
+    assert (
+        cli.main(
+            [
+                "--ip",
+                "192.168.1.42",
+                "--token",
+                "secret",
+                "--duration-ms",
+                "75",
+                "A",
+                "ENTER",
+            ]
+        )
+        == 0
+    )
+
+    assert calls == [
+        ("init", "http://192.168.1.42", "secret", 5.0),
+        ("press", "A", 75),
+        ("press", "ENTER", 75),
+    ]
+    assert "secret" not in capsys.readouterr().out
 
 
 def test_websocket_commands_and_authentication():

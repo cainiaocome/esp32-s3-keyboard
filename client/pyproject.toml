@@ -9,5 +9,8 @@ description = "Python REST and WebSocket client for an ESP32-S3 Remote HID keybo
 requires-python = ">=3.10"
 dependencies = ["websockets==15.0.1"]
 
+[project.scripts]
+remote-hid-send = "remote_hid_client.cli:main"
+
 [tool.setuptools.packages.find]
 include = ["remote_hid_client*"]

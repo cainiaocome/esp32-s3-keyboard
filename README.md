@@ -121,7 +121,7 @@ make down                              stop the Docker dev stack
 make build                             build firmware inside the Docker shell
 make test                              host unit and non-hardware integration tests
 make test-unit                         C++ keyboard-core tests
-make test-integration                  Python configuration tests
+make test-integration                  Python integration and client tests
 make test-container                    validate the complete Docker dev environment
 make flash PORT=/dev/ttyACM0           flash firmware
 make monitor PORT=/dev/ttyACM0         monitor firmware
@@ -148,7 +148,8 @@ does not require a particular Linux desktop input stack for ordinary CI.
 ## REST API
 
 For a ready-to-use Python interface instead of constructing HTTP requests
-manually, see [`docs/PYTHON_CLIENT.md`](docs/PYTHON_CLIENT.md).
+manually, see [`docs/PYTHON_CLIENT.md`](docs/PYTHON_CLIENT.md). The client
+package and debug helper live under `client/`.
 
 All API routes require:
 

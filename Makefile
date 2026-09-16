@@ -33,7 +33,7 @@ help:
 	@echo "  make build                             build firmware (run inside make up shell)"
 	@echo "  make test                              run all non-hardware tests"
 	@echo "  make test-unit                         run C++ keyboard-core tests"
-	@echo "  make test-integration                  run Python integration tests"
+	@echo "  make test-integration                  run Python integration and client tests"
 	@echo "  make test-container                    validate the complete Docker dev environment"
 	@echo "  make flash PORT=/dev/ttyACM0           flash firmware"
 	@echo "  make monitor PORT=/dev/ttyACM0         monitor firmware"
@@ -79,7 +79,8 @@ test-unit:
 	fi
 
 test-integration:
-	$(IDF_PYTHON) -m pytest -m "not hardware"
+	PYTHONPATH="$(CURDIR)/client$${PYTHONPATH:+:$${PYTHONPATH}}" \
+		$(IDF_PYTHON) -m pytest -m "not hardware"
 
 test-container:
 	./scripts/test-container.sh

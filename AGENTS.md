@@ -16,7 +16,9 @@
 
 ## Python client and documentation
 
-- The Python REST/WebSocket client in `remote_hid_client/` is a supported
+- Keep client package metadata, implementation, and command-line helpers under
+  `client/`; do not place client packaging metadata in the repository root.
+- The Python REST/WebSocket client in `client/remote_hid_client/` is a supported
   user-facing interface and must remain aligned with the firmware API contract.
 - Changes to REST or WebSocket behavior must include client updates and
   comprehensive automated client/API tests.
