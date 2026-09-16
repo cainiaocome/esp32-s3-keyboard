@@ -577,10 +577,11 @@ Content-Type: application/json
 
 Semantics:
 
-1. press specified keys in a deterministic order
-2. wait the short configured duration
-3. release all keys from this combo in reverse or well-documented order
-4. preserve correctness even if an error occurs
+1. validate and add the specified keys in a deterministic order
+2. emit one complete HID report containing the resulting combined state
+3. wait the short configured duration
+4. release all keys from this combo in reverse or well-documented order
+5. preserve correctness even if an error occurs
 
 Avoid implementing arbitrary long macro execution in the first release.
 

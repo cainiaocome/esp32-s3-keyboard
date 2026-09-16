@@ -213,11 +213,12 @@ curl -H "Authorization: Bearer $API_TOKEN" \
 ```
 
 `press` and `combo` are non-blocking. The down report is sent immediately and the maintenance
-task sends the release after `duration_ms` (1–1000 ms). The default is 50 ms. A combo presses
-keys in request order and releases its newly pressed keys together after the duration. More
-than six normal keys are rejected without corrupting existing state; a rejected combo rolls
-back only the keys it added. Calling `press` for a key that is already held is an intentional
-idempotent no-op so a retry cannot release another client's hold.
+task sends the release after `duration_ms` (1–1000 ms). The default is 50 ms. A combo adds all
+newly pressed keys in request order, emits one complete combined report, and releases its newly
+pressed keys together after the duration. More than six normal keys are rejected without
+corrupting existing state; a rejected combo rolls back only the keys it added. Calling `press`
+for a key that is already held is an intentional idempotent no-op so a retry cannot release
+another client's hold.
 
 Supported names include `A`–`Z`, `0`–`9`, `ENTER`, `ESC`, `BACKSPACE`, `TAB`, `SPACE`, punctuation,
 `CAPS_LOCK`, `F1`–`F12`, print/scroll/pause, navigation keys, keypad keys, and

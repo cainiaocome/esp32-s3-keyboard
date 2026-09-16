@@ -185,21 +185,16 @@ EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count, uint6
 
     std::array<KeyCode, kHidKeySlots> newly_pressed{};
     std::size_t newly_pressed_count = 0;
-    bool backend_failure = false;
     for (std::size_t i = 0; i < count; ++i) {
         if (has_key_locked(keys[i])) {
             continue;
         }
-        const EngineResult result = set_key_locked(keys[i], true);
-        if (result != EngineResult::kOk && result != EngineResult::kBackendFailure) {
+        if (!add_key_locked(keys[i])) {
             for (std::size_t j = 0; j < newly_pressed_count; ++j) {
-                cancel_pending_release_locked(newly_pressed[j]);
                 remove_key_locked(newly_pressed[j]);
             }
-            send_current_report_locked();
-            return result;
+            return EngineResult::kRollover;
         }
-        backend_failure = backend_failure || result == EngineResult::kBackendFailure;
         newly_pressed[newly_pressed_count++] = keys[i];
     }
 
@@ -220,7 +215,7 @@ EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count, uint6
         }
     }
     refresh_activity_locked(clock_.now_ms());
-    return backend_failure ? EngineResult::kBackendFailure : EngineResult::kOk;
+    return send_current_report_locked();
 }
 
 EngineResult KeyboardEngine::release_all() {

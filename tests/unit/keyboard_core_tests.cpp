@@ -134,10 +134,12 @@ void test_combo_and_release_all() {
     KeyboardEngine engine(backend, clock);
     const std::array<KeyCode, 2> combo = {KeyCode::LEFT_CTRL, KeyCode::C};
 
+    const std::size_t reports_before_combo = backend.reports.size();
     expect(engine.combo(combo.data(), combo.size()) == EngineResult::kOk, "combo succeeds");
+    expect(backend.reports.size() == reports_before_combo + 1, "combo emits one complete report");
     expect(backend.reports.back() ==
                expected(modifier_bit(KeyCode::LEFT_CTRL), {key_usage(KeyCode::C)}),
-           "combo presses keys in order");
+           "combo report contains all keys");
     clock.advance_ms(50);
     engine.tick();
     expect(backend.reports.back() == HidReport{}, "combo releases all members");
@@ -156,11 +158,14 @@ void test_combo_rollover_rolls_back_only_combo_keys() {
         expect(engine.key_down(key) == EngineResult::kOk, "hold five normal keys before combo");
     }
     const HidReport before_combo = engine.report();
+    const std::size_t reports_before_combo = backend.reports.size();
     const std::array<KeyCode, 2> overflowing_combo = {KeyCode::F, KeyCode::G};
     expect(engine.combo(overflowing_combo.data(), overflowing_combo.size()) ==
                EngineResult::kRollover,
            "overflowing combo is rejected");
     expect(engine.report() == before_combo, "combo rollback preserves unrelated held state");
+    expect(backend.reports.size() == reports_before_combo,
+           "rejected combo emits no partial reports");
     expect(engine.is_pressed(KeyCode::LEFT_CTRL), "combo rollback preserves modifier");
     expect(!engine.is_pressed(KeyCode::F), "combo rollback removes first partial key");
 }

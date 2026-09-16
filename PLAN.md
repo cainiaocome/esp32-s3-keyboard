@@ -60,6 +60,9 @@ an explicit optional hardware path.
 - Python text-entry follow-up complete: `RemoteHIDClient.type()` maps printable
   ASCII text, including uppercase and shifted US-layout punctuation, to the
   existing REST press/combo operations with client tests and documentation.
+- HID combo follow-up complete: combo state is assembled before transmission so
+  each combo emits one complete report without an intermediate modifier-only
+  report; unit tests cover atomic success and rollover rejection.
 
 ## Constraints / decisions
 

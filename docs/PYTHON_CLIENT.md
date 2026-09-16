@@ -157,6 +157,10 @@ client.release_all()
 contain 1 through 6 non-empty key names. The client does not maintain keyboard
 state locally; the device remains authoritative.
 
+The firmware constructs a combo's complete keyboard state before emitting one
+combined HID report. It does not send intermediate modifier-only reports, which
+keeps combinations such as `combo(["LEFT_SHIFT", "7"])` reliable on USB hosts.
+
 `type(text)` accepts printable ASCII characters from space (`0x20`) through
 tilde (`0x7e`). It sends lowercase letters, digits, and unshifted punctuation
 with `press()`, and uses `LEFT_SHIFT` combos for uppercase letters and shifted
