@@ -3,6 +3,7 @@
 #include "wifi_manager.hpp"
 
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -94,5 +95,6 @@ extern "C" void app_main(void) {
     if (xTaskCreate(&keyboard_maintenance_task, "keyboard_maintenance", 3072, &runtime, 5,
                     nullptr) != pdPASS) {
         ESP_LOGE("remote_hid_app", "Could not start keyboard maintenance task");
+        esp_restart();
     }
 }

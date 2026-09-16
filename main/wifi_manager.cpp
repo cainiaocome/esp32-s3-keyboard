@@ -65,9 +65,11 @@ bool WifiManager::start() {
     const char* password = config_.wifi_password == nullptr ? "" : config_.wifi_password;
     std::strncpy(reinterpret_cast<char*>(wifi_config.sta.password), password,
                  sizeof(wifi_config.sta.password) - 1);
-    wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
+    // Refuse open/weak rogue APs advertising the configured SSID. WPA2 is the
+    // minimum acceptable association for the bearer-token control channel.
+    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     wifi_config.sta.pmf_cfg.capable = true;
-    wifi_config.sta.pmf_cfg.required = false;
+    wifi_config.sta.pmf_cfg.required = true;
 
     if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK ||
         esp_wifi_set_config(WIFI_IF_STA, &wifi_config) != ESP_OK || esp_wifi_start() != ESP_OK) {

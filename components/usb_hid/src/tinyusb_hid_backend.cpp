@@ -86,7 +86,8 @@ bool TinyUsbHidBackend::send_report(const HidReport& report) {
     }
     uint8_t keycodes[kHidKeySlots] = {};
     std::copy(report.keys.begin(), report.keys.end(), keycodes);
-    return tud_hid_keyboard_report(HID_ITF_PROTOCOL_KEYBOARD, report.modifiers, keycodes);
+    // The descriptor has no Report ID, so the report ID argument must be 0.
+    return tud_hid_keyboard_report(0, report.modifiers, keycodes);
 }
 
 bool TinyUsbHidBackend::mounted() const { return initialized_ && tud_mounted(); }

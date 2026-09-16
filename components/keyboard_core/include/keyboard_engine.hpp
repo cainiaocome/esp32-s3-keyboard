@@ -69,6 +69,7 @@ class KeyboardEngine {
     Clock& clock_;
     KeyboardEngineConfig config_;
     HidReport report_{};
+    bool report_dirty_ = false;
     uint64_t last_activity_ms_ = 0;
     std::array<PendingRelease, kMaxPendingReleases> pending_releases_{};
     mutable std::mutex mutex_;

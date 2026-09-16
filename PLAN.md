@@ -15,15 +15,19 @@ an explicit optional hardware path.
 
 ## Validation
 
-- Host `make test`: passed using the g++ fallback (core) and pytest (2
-  integration tests; 1 hardware test deselected).
+- Host `make test`: passed using the g++ fallback (core) and pytest (3
+  non-hardware integration tests; 4 hardware tests deselected).
 - Pinned development image: built successfully and `make test` passed using
-  CMake (1 C++ test executable and 2 integration tests).
+  CMake (1 C++ test executable and 3 non-hardware integration tests).
 - ESP-IDF `v6.1` target build: passed for ESP32-S3; generated image is within
   the 1 MiB factory partition.
 - clang-format was applied to all C/C++ sources in the development image.
 - Remaining validation requires a physical ESP32-S3: flash, Wi-Fi/API smoke
   test, USB enumeration, and Linux host HID event observation.
+- Claude Code review follow-up complete: corrected HID report framing,
+  fail-closed WebSocket authentication, combo rollback, HID-send retries,
+  WebSocket frame cleanup, Wi-Fi association hardening, task-failure handling,
+  configuration validation/permissions, and added API/WebSocket contract tests.
 
 ## Constraints / decisions
 

@@ -86,5 +86,5 @@ format:
 	clang-format --dry-run --Werror $$files
 
 lint:
-	$(IDF_PYTHON) -m py_compile scripts/generate_sdkconfig.py tests/integration/test_config.py
+	$(IDF_PYTHON) -m compileall -q scripts tests
 	$(MAKE) test-unit

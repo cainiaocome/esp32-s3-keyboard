@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import shlex
+import stat
 
 
 MAPPING = {
@@ -14,6 +16,11 @@ MAPPING = {
     "API_TOKEN": "REMOTE_HID_API_TOKEN",
     "KEY_HOLD_TIMEOUT_MS": "REMOTE_HID_KEY_HOLD_TIMEOUT_MS",
     "KEY_PRESS_DURATION_MS": "REMOTE_HID_KEY_PRESS_DURATION_MS",
+}
+
+RANGES = {
+    "KEY_HOLD_TIMEOUT_MS": (1000, 600000),
+    "KEY_PRESS_DURATION_MS": (1, 1000),
 }
 
 
@@ -54,9 +61,10 @@ def generate(values: dict[str, str]) -> str:
         if env_name not in values:
             continue
         value = values[env_name]
-        if env_name.endswith("_MS"):
-            if not value.isdigit() or int(value) <= 0:
-                raise ValueError(f"{env_name} must be a positive integer")
+        if env_name in RANGES:
+            minimum, maximum = RANGES[env_name]
+            if not value.isdigit() or not minimum <= int(value) <= maximum:
+                raise ValueError(f"{env_name} must be an integer from {minimum} to {maximum}")
             lines.append(f"CONFIG_{kconfig_name}={value}")
         else:
             lines.append(f"CONFIG_{kconfig_name}={kconfig_string(value)}")
@@ -75,6 +83,7 @@ def main() -> int:
     except ValueError as exc:
         parser.error(str(exc))
     args.output.write_text(output, encoding="utf-8")
+    os.chmod(args.output, stat.S_IRUSR | stat.S_IWUSR)
     print(f"Generated {args.output} from {args.env_file} (credentials not printed).")
     return 0
 

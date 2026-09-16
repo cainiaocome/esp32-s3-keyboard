@@ -38,9 +38,9 @@ class HttpServer final {
     static esp_err_t handle_release_all(httpd_req_t* req);
     static esp_err_t handle_combo(httpd_req_t* req);
     static esp_err_t handle_websocket(httpd_req_t* req);
-#if CONFIG_HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT
     static esp_err_t websocket_pre_handshake(httpd_req_t* req);
-#endif
+    static void session_close(httpd_handle_t handle, int socket_fd);
+    static void free_global_context(void* context);
 
     esp_err_t status(httpd_req_t* req);
     esp_err_t key_action(httpd_req_t* req, bool down);

@@ -8,6 +8,8 @@
 #include <new>
 #include <string>
 
+#include <unistd.h>
+
 #include "cJSON.h"
 #include "esp_log.h"
 
@@ -16,9 +18,14 @@
 namespace remote_hid {
 namespace {
 
+#if !CONFIG_HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT
+#error "WebSocket authentication requires CONFIG_HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT=y"
+#endif
+
 constexpr char kTag[] = "remote_hid_http";
 constexpr char kSuccessJson[] = "{\"ok\":true}";
 constexpr char kBearerPrefix[] = "Bearer ";
+constexpr std::size_t kMaxAuthorizationHeader = 512;
 
 const char* result_error(EngineResult result) {
     switch (result) {
@@ -114,6 +121,9 @@ bool HttpServer::start() {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 8;
     config.stack_size = 8192;
+    config.global_user_ctx = this;
+    config.global_user_ctx_free_fn = &HttpServer::free_global_context;
+    config.close_fn = &HttpServer::session_close;
     if (httpd_start(&server_, &config) != ESP_OK) {
         ESP_LOGE(kTag, "Failed to start HTTP server");
         server_ = nullptr;
@@ -173,9 +183,7 @@ bool HttpServer::start() {
     websocket_uri.user_ctx = this;
     websocket_uri.is_websocket = true;
     websocket_uri.handle_ws_control_frames = true;
-#if CONFIG_HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT
     websocket_uri.ws_pre_handshake_cb = &HttpServer::websocket_pre_handshake;
-#endif
     if (httpd_register_uri_handler(server_, &websocket_uri) != ESP_OK) {
         ESP_LOGE(kTag, "Failed to register WebSocket route");
         stop();
@@ -223,7 +231,6 @@ esp_err_t HttpServer::handle_websocket(httpd_req_t* req) {
     return static_cast<HttpServer*>(req->user_ctx)->websocket(req);
 }
 
-#if CONFIG_HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT
 esp_err_t HttpServer::websocket_pre_handshake(httpd_req_t* req) {
     auto* server = static_cast<HttpServer*>(req->user_ctx);
     if (server->authorized(req)) {
@@ -232,14 +239,27 @@ esp_err_t HttpServer::websocket_pre_handshake(httpd_req_t* req) {
     server->send_error(req, 401, "unauthorized", "A valid Bearer token is required");
     return ESP_FAIL;
 }
-#endif
+
+void HttpServer::session_close(httpd_handle_t handle, int socket_fd) {
+    if (httpd_ws_get_fd_info(handle, socket_fd) == HTTPD_WS_CLIENT_WEBSOCKET) {
+        auto* server = static_cast<HttpServer*>(httpd_get_global_user_ctx(handle));
+        if (server != nullptr) {
+            server->keyboard_.release_all();
+        }
+    }
+    if (socket_fd >= 0) {
+        close(socket_fd);
+    }
+}
+
+void HttpServer::free_global_context(void* context) { (void)context; }
 
 bool HttpServer::authorized(httpd_req_t* req) const {
     const size_t header_length = httpd_req_get_hdr_value_len(req, "Authorization");
-    if (header_length <= sizeof(kBearerPrefix) - 1 || header_length > 256) {
+    if (header_length <= sizeof(kBearerPrefix) - 1 || header_length > kMaxAuthorizationHeader) {
         return false;
     }
-    char header[257] = {};
+    char header[kMaxAuthorizationHeader + 1] = {};
     if (httpd_req_get_hdr_value_str(req, "Authorization", header, sizeof(header)) != ESP_OK) {
         return false;
     }
@@ -559,19 +579,21 @@ esp_err_t HttpServer::websocket(httpd_req_t* req) {
     }
     if (packet.len > kMaxRequestBody) {
         keyboard_.release_all();
-        return send_ws_error(req, "body_too_large", "The WebSocket message is too long") ? ESP_OK
-                                                                                         : ESP_FAIL;
+        send_ws_error(req, "body_too_large", "The WebSocket message is too long");
+        return ESP_FAIL;
     }
     std::unique_ptr<uint8_t[]> payload(new (std::nothrow) uint8_t[packet.len + 1]);
     if (!payload) {
         keyboard_.release_all();
         return ESP_ERR_NO_MEM;
     }
-    packet.payload = payload.get();
-    result = httpd_ws_recv_frame(req, &packet, packet.len);
-    if (result != ESP_OK) {
-        keyboard_.release_all();
-        return result;
+    if (packet.len > 0) {
+        packet.payload = payload.get();
+        result = httpd_ws_recv_frame(req, &packet, packet.len);
+        if (result != ESP_OK) {
+            keyboard_.release_all();
+            return result;
+        }
     }
     if (packet.type == HTTPD_WS_TYPE_CLOSE) {
         keyboard_.release_all();

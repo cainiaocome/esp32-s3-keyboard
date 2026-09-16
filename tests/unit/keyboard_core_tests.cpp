@@ -145,6 +145,26 @@ void test_combo_and_release_all() {
     expect(backend.reports.back() == HidReport{}, "release-all emits empty barrier report");
 }
 
+void test_combo_rollover_rolls_back_only_combo_keys() {
+    FakeClock clock;
+    FakeHidBackend backend;
+    KeyboardEngine engine(backend, clock);
+    expect(engine.key_down(KeyCode::LEFT_CTRL) == EngineResult::kOk, "hold modifier before combo");
+    const std::array<KeyCode, 5> held = {KeyCode::A, KeyCode::B, KeyCode::C, KeyCode::D,
+                                         KeyCode::E};
+    for (KeyCode key : held) {
+        expect(engine.key_down(key) == EngineResult::kOk, "hold five normal keys before combo");
+    }
+    const HidReport before_combo = engine.report();
+    const std::array<KeyCode, 2> overflowing_combo = {KeyCode::F, KeyCode::G};
+    expect(engine.combo(overflowing_combo.data(), overflowing_combo.size()) ==
+               EngineResult::kRollover,
+           "overflowing combo is rejected");
+    expect(engine.report() == before_combo, "combo rollback preserves unrelated held state");
+    expect(engine.is_pressed(KeyCode::LEFT_CTRL), "combo rollback preserves modifier");
+    expect(!engine.is_pressed(KeyCode::F), "combo rollback removes first partial key");
+}
+
 void test_timeout_and_invalid_input() {
     FakeClock clock;
     FakeHidBackend backend;
@@ -203,6 +223,33 @@ void test_status_order_and_duration_validation() {
            "status exposes deterministic key order");
     expect(engine.key_press(KeyCode::B, 1001) == EngineResult::kInvalidArgument,
            "long press rejected");
+    const std::size_t reports_before_noop_press = backend.reports.size();
+    expect(engine.key_press(KeyCode::A, 50) == EngineResult::kOk,
+           "press on an already-held key is safe");
+    expect(backend.reports.size() == reports_before_noop_press,
+           "press on an already-held key does not alter state");
+}
+
+void test_empty_tick_and_failed_send_retry() {
+    FakeClock clock;
+    FakeHidBackend backend;
+    KeyboardEngine engine(backend, clock);
+    clock.advance_ms(10000);
+    engine.tick();
+    expect(backend.reports.empty(), "idle tick does not emit spurious empty reports");
+
+    expect(engine.key_down(KeyCode::Z) == EngineResult::kOk, "retry test down");
+    backend.fail = true;
+    expect(engine.key_up(KeyCode::Z) == EngineResult::kBackendFailure,
+           "failed release is reported");
+    expect(engine.report() == HidReport{}, "logical state clears after failed release");
+    const std::size_t reports_after_failure = backend.reports.size();
+    backend.fail = false;
+    clock.advance_ms(10);
+    engine.tick();
+    expect(backend.reports.size() == reports_after_failure + 1,
+           "failed release is retried by maintenance tick");
+    expect(backend.reports.back() == HidReport{}, "retry sends the empty release report");
 }
 
 } // namespace
@@ -213,9 +260,11 @@ int main() {
     test_press_is_non_blocking_and_completes();
     test_modifiers_and_ctrl_c();
     test_combo_and_release_all();
+    test_combo_rollover_rolls_back_only_combo_keys();
     test_timeout_and_invalid_input();
     test_rollover_and_backend_failure();
     test_status_order_and_duration_validation();
+    test_empty_tick_and_failed_send_retry();
     std::cout << "keyboard_core_tests: all tests passed\n";
     return 0;
 }

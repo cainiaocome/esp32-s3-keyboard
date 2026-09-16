@@ -40,6 +40,10 @@ The API refuses to start unless `API_TOKEN` is configured. The default server is
 port 80 and is intended for a trusted LAN only. Anyone who can observe that LAN traffic can
 capture the bearer token; do not expose the device directly to the Internet.
 
+The station refuses open networks and requires WPA2-or-stronger association with protected
+management frames. This reduces rogue-AP downgrade risk, but does not replace HTTPS on an
+untrusted network.
+
 ## Docker development
 
 The pinned development image is `espressif/idf:v6.1`:
@@ -109,6 +113,8 @@ All API routes require:
 Authorization: Bearer <API_TOKEN>
 ```
 
+The HTTP server accepts Authorization headers up to 512 bytes, including the `Bearer ` prefix.
+
 Status:
 
 ```http
@@ -145,7 +151,9 @@ curl -H "Authorization: Bearer $API_TOKEN" \
 `press` and `combo` are non-blocking. The down report is sent immediately and the maintenance
 task sends the release after `duration_ms` (1–1000 ms). The default is 50 ms. A combo presses
 keys in request order and releases its newly pressed keys together after the duration. More
-than six normal keys are rejected without corrupting existing state.
+than six normal keys are rejected without corrupting existing state; a rejected combo rolls
+back only the keys it added. Calling `press` for a key that is already held is an intentional
+idempotent no-op so a retry cannot release another client's hold.
 
 Supported names include `A`–`Z`, `0`–`9`, `ENTER`, `ESC`, `BACKSPACE`, `TAB`, `SPACE`, punctuation,
 `CAPS_LOCK`, `F1`–`F12`, print/scroll/pause, navigation keys, keypad keys, and
@@ -171,7 +179,8 @@ text messages such as:
 ```
 
 The server responds with the same JSON success/error shape. Invalid messages do not create a
-second keyboard state machine. A WebSocket disconnect triggers `release_all`, as do Wi-Fi
+second keyboard state machine. A WebSocket disconnect, including an abrupt TCP close, triggers
+`release_all`, as do Wi-Fi
 disconnects, HTTP server shutdown, USB attach/detach transitions, and the inactivity timeout.
 
 ## Safety and logging
@@ -181,6 +190,6 @@ emits an empty HID report even when the logical state is already empty. The engi
 for REST, WebSocket, Wi-Fi, and maintenance-task concurrency; it never waits on network I/O
 while holding that state lock. Normal key values are not logged.
 
-If an HID report cannot be sent, the logical state remains authoritative so a subsequent
-release or recovery operation can clear it. When the HID host attaches again, the firmware emits
-an empty recovery report before accepting normal operation.
+If an HID report cannot be sent, the logical state remains authoritative and the maintenance
+task retries the complete current report until the backend accepts it. When the HID host attaches
+again, the firmware emits an empty recovery report before accepting normal operation.

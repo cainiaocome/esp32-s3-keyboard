@@ -1,4 +1,6 @@
 from pathlib import Path
+import os
+import stat
 import subprocess
 import sys
 
@@ -44,3 +46,29 @@ def test_env_comments_and_kconfig_escaping(tmp_path: Path) -> None:
     )
     assert 'CONFIG_REMOTE_HID_WIFI_SSID="ssid\\\\name"' in generated
     assert 'CONFIG_REMOTE_HID_WIFI_PASSWORD="pass\\"word"' in generated
+
+
+def test_timing_ranges_fail_fast_and_output_is_private(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    output_file = tmp_path / "sdkconfig.defaults.local"
+    env_file.write_text(
+        "WIFI_SSID=ssid\nAPI_TOKEN=token\nKEY_HOLD_TIMEOUT_MS=500\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, str(GENERATOR), "--env-file", str(env_file), "--output", str(output_file)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "KEY_HOLD_TIMEOUT_MS must be an integer from 1000 to 600000" in result.stderr
+
+    output_file.write_text("old", encoding="utf-8")
+    os.chmod(output_file, 0o644)
+    env_file.write_text("WIFI_SSID=ssid\nAPI_TOKEN=token\n", encoding="utf-8")
+    subprocess.run(
+        [sys.executable, str(GENERATOR), "--env-file", str(env_file), "--output", str(output_file)],
+        check=True,
+    )
+    assert stat.S_IMODE(output_file.stat().st_mode) == 0o600
