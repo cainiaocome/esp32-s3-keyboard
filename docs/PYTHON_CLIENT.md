@@ -259,6 +259,10 @@ Typical errors include `unauthorized` (401), `unknown_key` (400),
 available for rejected WebSocket commands, although WebSocket command errors
 do not have an HTTP status code.
 
+The firmware retries HID report submission briefly when the USB interrupt
+endpoint is between host polling intervals. A `hid_backend_failure` therefore
+indicates that the report could not be accepted even after those retries.
+
 Input-shape errors detected before contacting the device raise `ValueError`:
 empty key names, invalid durations, and combos outside the 1–6 key limit.
 

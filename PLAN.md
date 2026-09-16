@@ -63,6 +63,9 @@ an explicit optional hardware path.
 - HID combo follow-up complete: combo state is assembled before transmission so
   each combo emits one complete report without an intermediate modifier-only
   report; unit tests cover atomic success and rollover rejection.
+- HID transport follow-up complete: the TinyUSB backend retries briefly across
+  HID host polling intervals so rapid REST sequences do not fail on transient
+  endpoint-busy responses.
 
 ## Constraints / decisions
 

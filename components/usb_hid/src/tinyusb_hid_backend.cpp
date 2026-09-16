@@ -5,6 +5,8 @@
 
 #include "class/hid/hid_device.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
 
@@ -12,6 +14,8 @@ namespace remote_hid {
 namespace {
 
 constexpr char kTag[] = "remote_hid_usb";
+constexpr int kReportSendAttempts = 3;
+constexpr uint32_t kReportRetryDelayMs = 10;
 
 #define TUSB_DESC_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN)
 
@@ -87,7 +91,21 @@ bool TinyUsbHidBackend::send_report(const HidReport& report) {
     uint8_t keycodes[kHidKeySlots] = {};
     std::copy(report.keys.begin(), report.keys.end(), keycodes);
     // The descriptor has no Report ID, so the report ID argument must be 0.
-    return tud_hid_keyboard_report(0, report.modifiers, keycodes);
+    for (int attempt = 0; attempt < kReportSendAttempts; ++attempt) {
+        if (!tud_mounted()) {
+            return false;
+        }
+        if (tud_hid_keyboard_report(0, report.modifiers, keycodes)) {
+            return true;
+        }
+        if (attempt + 1 < kReportSendAttempts) {
+            // HID interrupt endpoints can remain busy until the next host
+            // polling interval. Yield so the TinyUSB task can complete the
+            // previous transfer before retrying this complete report.
+            vTaskDelay(pdMS_TO_TICKS(kReportRetryDelayMs));
+        }
+    }
+    return false;
 }
 
 bool TinyUsbHidBackend::mounted() const { return initialized_ && tud_mounted(); }
