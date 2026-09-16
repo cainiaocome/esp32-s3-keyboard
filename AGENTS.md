@@ -13,3 +13,14 @@
   publishing an image to GHCR.
 - Published images must provide a branch tag and a short-commit tag so users
   can choose a moving development version or pin an exact image version.
+
+## Python client and documentation
+
+- The Python REST/WebSocket client in `remote_hid_client/` is a supported
+  user-facing interface and must remain aligned with the firmware API contract.
+- Changes to REST or WebSocket behavior must include client updates and
+  comprehensive automated client/API tests.
+- User-facing client and API behavior must be documented comprehensively in
+  `docs/`, with `docs/PYTHON_CLIENT.md` kept current and linked from the main
+  README. Do not leave new client methods, protocol commands, authentication
+  behavior, limits, or error handling undocumented.

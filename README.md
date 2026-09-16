@@ -147,6 +147,9 @@ does not require a particular Linux desktop input stack for ordinary CI.
 
 ## REST API
 
+For a ready-to-use Python interface instead of constructing HTTP requests
+manually, see [`docs/PYTHON_CLIENT.md`](docs/PYTHON_CLIENT.md).
+
 All API routes require:
 
 ```http

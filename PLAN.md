@@ -10,14 +10,14 @@ an explicit optional hardware path.
 
 - Implemented: ESP-IDF project, keyboard core, USB adapter, Wi-Fi/REST/
   WebSocket adapters, developer tooling, GHCR-backed interactive Docker
-  development environment, CI image validation/publication, and optional
-  hardware API tests.
+  development environment, CI image validation/publication, optional hardware
+  API tests, and a supported Python REST/WebSocket client.
 - Baseline: ESP-IDF `v6.1`; the official `tusb_hid` example uses
   `espressif/esp_tinyusb`; this project pins resolved version `2.3.0`.
 
 ## Validation
 
-- Host `make test`: passed using the g++ fallback (core) and pytest (3
+- Host `make test`: passed using the g++ fallback (core) and pytest (12
   non-hardware integration tests; 4 hardware tests deselected).
 - Development image: based on ESP-IDF `v6.1`, preinstalls all project tools
   and test dependencies, and is consumed by Compose from GHCR with branch and
@@ -46,6 +46,10 @@ an explicit optional hardware path.
   fail-closed WebSocket authentication, combo rollback, HID-send retries,
   WebSocket frame cleanup, Wi-Fi association hardening, task-failure handling,
   configuration validation/permissions, and added API/WebSocket contract tests.
+- Python client follow-up complete: added installable `remote_hid_client` REST
+  and async WebSocket interfaces, local HTTP/WebSocket contract tests, package
+  wheel validation in CI, `docs/PYTHON_CLIENT.md`, and the corresponding
+  documentation rule in `AGENTS.md`.
 
 ## Constraints / decisions
 
