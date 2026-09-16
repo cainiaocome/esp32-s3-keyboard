@@ -27,6 +27,9 @@ an explicit optional hardware path.
   opens Bash in `/workspace`, and automatically adds the host `dialout` GID
   plus a detected serial device when one exists. The hardware overlay was also
   validated with `/dev/null` as a harmless device stand-in.
+- Shell wrappers are executable, and `scripts/bootstrap.sh` selects the pinned
+  ESP-IDF Python interpreter when present. `Dockerfile.dev` exports that
+  interpreter so `make bootstrap` has `pip` inside the development container.
 - Remaining validation requires a physical ESP32-S3: flash, Wi-Fi/API smoke
   test, USB enumeration, and Linux host HID event observation.
 - Claude Code review follow-up complete: corrected HID report framing,

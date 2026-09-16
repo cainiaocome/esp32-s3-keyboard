@@ -4,9 +4,22 @@ set -euo pipefail
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_dir"
 
-python_bin="${IDF_PYTHON:-python3}"
+if [[ -n "${IDF_PYTHON:-}" ]]; then
+    python_bin="$IDF_PYTHON"
+elif [[ -x "/opt/esp/python_env/idf6.1_py3.12_env/bin/python" ]]; then
+    python_bin="/opt/esp/python_env/idf6.1_py3.12_env/bin/python"
+else
+    python_bin="python3"
+fi
+
 if ! command -v "$python_bin" >/dev/null 2>&1; then
-    echo "Python 3 is required." >&2
+    echo "Python interpreter '$python_bin' was not found." >&2
+    exit 1
+fi
+
+if ! "$python_bin" -m pip --version >/dev/null 2>&1; then
+    echo "Python interpreter '$python_bin' does not provide pip." >&2
+    echo "Install pip or set IDF_PYTHON to an interpreter with pip." >&2
     exit 1
 fi
 

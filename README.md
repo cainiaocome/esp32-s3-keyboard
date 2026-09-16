@@ -57,6 +57,9 @@ docker compose run --rm dev make test
 docker compose run --rm dev make build
 ```
 
+Inside the pinned development container, `make bootstrap` uses the ESP-IDF Python environment,
+which includes `pip`; it does not depend on the system `/usr/bin/python3` package.
+
 On a native Linux Docker host, `make up` automatically passes `/dev/ttyACM0` to the container
 when it exists. Select another device with `make up PORT=/dev/ttyUSB0`. The target also adds
 the host `dialout` group by numeric GID, which is how Unix permissions work across the container
