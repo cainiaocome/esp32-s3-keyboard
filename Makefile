@@ -6,19 +6,27 @@ IDF_TARGET ?= esp32s3
 HOST_BUILD_DIR ?= build/host
 ENV_FILE ?= .env
 LOCAL_SDKCONFIG ?= sdkconfig.defaults.local
+PORT ?= /dev/ttyACM0
+REMOTE_HID_DEVICE ?= $(PORT)
+DIALOUT_GID ?= $(shell getent group dialout 2>/dev/null | cut -d: -f3)
+COMPOSE ?= docker compose
 
 SDKCONFIG_DEFAULTS = sdkconfig.defaults$(if $(wildcard $(LOCAL_SDKCONFIG)),;$(LOCAL_SDKCONFIG))
 
 export IDF_TARGET
 export SDKCONFIG_DEFAULTS
+export REMOTE_HID_DEVICE
+export DIALOUT_GID
 
 .PHONY: help bootstrap config build clean test test-unit test-integration \
-        flash monitor test-hardware format lint
+        up down flash monitor test-hardware format lint
 
 help:
 	@echo "ESP32-S3 Remote HID"
 	@echo "  make bootstrap                         install Python test dependencies"
 	@echo "  make config                            generate ignored sdkconfig defaults from .env"
+	@echo "  make up [PORT=/dev/ttyACM0]            start Docker dev stack and open a shell"
+	@echo "  make down                              stop the Docker dev stack"
 	@echo "  make build                             build firmware (ESP-IDF required)"
 	@echo "  make test                              run all non-hardware tests"
 	@echo "  make test-unit                         run C++ keyboard-core tests"
@@ -67,6 +75,21 @@ test-unit:
 
 test-integration:
 	$(IDF_PYTHON) -m pytest -m "not hardware"
+
+up:
+	@set -e; \
+	compose_files="-f compose.yaml"; \
+	if [[ -e "$(REMOTE_HID_DEVICE)" ]]; then \
+		compose_files="$$compose_files -f compose.hardware.yaml"; \
+		echo "Passing $(REMOTE_HID_DEVICE) to the container (dialout GID: $${DIALOUT_GID:-unknown})."; \
+	else \
+		echo "$(REMOTE_HID_DEVICE) is not present; starting a build/test-only container."; \
+	fi; \
+	$(COMPOSE) $$compose_files up --build --pull always -d; \
+	$(COMPOSE) $$compose_files exec dev bash
+
+down:
+	$(COMPOSE) down
 
 flash: build
 	@test -n "$(PORT)" || { echo "Usage: make flash PORT=/dev/ttyACM0" >&2; exit 2; }

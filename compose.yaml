@@ -8,4 +8,6 @@ services:
       - .:/workspace
     environment:
       IDF_TARGET: esp32s3
-    command: bash
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]

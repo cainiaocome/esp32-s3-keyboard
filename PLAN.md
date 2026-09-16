@@ -9,7 +9,8 @@ an explicit optional hardware path.
 ## State
 
 - Implemented: ESP-IDF project, keyboard core, USB adapter, Wi-Fi/REST/
-  WebSocket adapters, developer tooling, CI, and optional hardware API tests.
+  WebSocket adapters, developer tooling, interactive Docker development shell,
+  CI, and optional hardware API tests.
 - Baseline: ESP-IDF `v6.1`; the official `tusb_hid` example uses
   `espressif/esp_tinyusb`; this project pins resolved version `2.3.0`.
 
@@ -22,6 +23,10 @@ an explicit optional hardware path.
 - ESP-IDF `v6.1` target build: passed for ESP32-S3; generated image is within
   the 1 MiB factory partition.
 - clang-format was applied to all C/C++ sources in the development image.
+- `make up` was smoke-tested through a real PTY; it starts the Compose service,
+  opens Bash in `/workspace`, and automatically adds the host `dialout` GID
+  plus a detected serial device when one exists. The hardware overlay was also
+  validated with `/dev/null` as a harmless device stand-in.
 - Remaining validation requires a physical ESP32-S3: flash, Wi-Fi/API smoke
   test, USB enumeration, and Linux host HID event observation.
 - Claude Code review follow-up complete: corrected HID report framing,

@@ -49,11 +49,20 @@ untrusted network.
 The pinned development image is `espressif/idf:v6.1`:
 
 ```bash
+make up
+# Work inside the Bash shell. Exit it with Ctrl-D; the stack remains running.
+make down
+
 docker compose run --rm dev make test
 docker compose run --rm dev make build
 ```
 
-On a native Linux Docker host, a serial/JTAG device can be passed to the container explicitly:
+On a native Linux Docker host, `make up` automatically passes `/dev/ttyACM0` to the container
+when it exists. Select another device with `make up PORT=/dev/ttyUSB0`. The target also adds
+the host `dialout` group by numeric GID, which is how Unix permissions work across the container
+boundary. Normal tests and builds do not require a board and work even when the device is absent.
+
+For one-off commands, a serial/JTAG device can also be passed explicitly:
 
 ```bash
 docker compose run --rm --device=/dev/ttyACM0 dev make flash PORT=/dev/ttyACM0
@@ -61,8 +70,11 @@ docker compose run --rm --device=/dev/ttyACM0 dev make monitor PORT=/dev/ttyACM0
 ```
 
 Use the actual `/dev/ttyACM*` or `/dev/ttyUSB*` path. After reset, the path can change when the
-board re-enumerates, and the container user may need host-side dialout/device permissions. A
-permission error usually means the device node is not accessible to the container user.
+board re-enumerates. On the host, add your login user to `dialout` once with
+`sudo usermod -aG dialout "$USER"`, then log out and back in (or run `newgrp dialout`). Verify
+with `id` and `ls -l /dev/ttyACM0`. A container does not inherit supplementary groups from the
+host login session; it needs the device mapping and the matching numeric group, both handled by
+`make up`.
 Avoid `--privileged`; pass only the required device. Raw USB HID observation may additionally
 need a narrowly scoped `/dev/bus/usb` mapping and suitable permissions.
 
@@ -80,6 +92,8 @@ the native port to the target computer for the final HID test.
 ```text
 make bootstrap                         install Python test dependencies
 make config                            generate ignored sdkconfig defaults from .env
+make up [PORT=/dev/ttyACM0]            start Docker dev stack and open a shell
+make down                              stop the Docker dev stack
 make build                             build firmware (ESP-IDF v6.1 required)
 make test                              host unit and non-hardware integration tests
 make test-unit                         C++ keyboard-core tests
