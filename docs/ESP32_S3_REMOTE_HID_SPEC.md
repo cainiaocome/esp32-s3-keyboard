@@ -438,8 +438,14 @@ At minimum configure:
 ```text
 WIFI_SSID
 WIFI_PASSWORD
+WIFI_PMF_REQUIRED
 API_TOKEN
 ```
+
+`WIFI_PMF_REQUIRED=false` is the compatibility default for ISP-managed WPA2
+access points that do not advertise Protected Management Frames. WPA2 or
+stronger authentication remains required. Set it to `true` when the access
+point supports PMF and strict management-frame protection is desired.
 
 Provide `.env.example` with placeholders only.
 
@@ -1102,6 +1108,7 @@ Example:
 ```dotenv
 WIFI_SSID=example
 WIFI_PASSWORD=change-me
+WIFI_PMF_REQUIRED=false
 API_TOKEN=replace-with-random-token
 KEY_HOLD_TIMEOUT_MS=10000
 KEY_PRESS_DURATION_MS=50

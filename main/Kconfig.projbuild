@@ -12,6 +12,14 @@ config REMOTE_HID_WIFI_PASSWORD
     help
         Wi-Fi station password. This value must not be committed.
 
+config REMOTE_HID_WIFI_PMF_REQUIRED
+    bool "Require Protected Management Frames (PMF)"
+    default n
+    help
+        Require the Wi-Fi access point to support Protected Management Frames.
+        Leave disabled for compatibility with WPA2 routers that do not provide
+        PMF. WPA2 authentication is still required.
+
 config REMOTE_HID_API_TOKEN
     string "API bearer token"
     default ""

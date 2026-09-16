@@ -13,6 +13,7 @@ import stat
 MAPPING = {
     "WIFI_SSID": "REMOTE_HID_WIFI_SSID",
     "WIFI_PASSWORD": "REMOTE_HID_WIFI_PASSWORD",
+    "WIFI_PMF_REQUIRED": "REMOTE_HID_WIFI_PMF_REQUIRED",
     "API_TOKEN": "REMOTE_HID_API_TOKEN",
     "KEY_HOLD_TIMEOUT_MS": "REMOTE_HID_KEY_HOLD_TIMEOUT_MS",
     "KEY_PRESS_DURATION_MS": "REMOTE_HID_KEY_PRESS_DURATION_MS",
@@ -22,6 +23,8 @@ RANGES = {
     "KEY_HOLD_TIMEOUT_MS": (1000, 600000),
     "KEY_PRESS_DURATION_MS": (1, 1000),
 }
+
+BOOLEANS = {"WIFI_PMF_REQUIRED"}
 
 
 def parse_env(path: Path) -> dict[str, str]:
@@ -66,6 +69,11 @@ def generate(values: dict[str, str]) -> str:
             if not value.isdigit() or not minimum <= int(value) <= maximum:
                 raise ValueError(f"{env_name} must be an integer from {minimum} to {maximum}")
             lines.append(f"CONFIG_{kconfig_name}={value}")
+        elif env_name in BOOLEANS:
+            normalized = value.lower()
+            if normalized not in {"true", "false"}:
+                raise ValueError(f"{env_name} must be true or false")
+            lines.append(f"CONFIG_{kconfig_name}={'y' if normalized == 'true' else 'n'}")
         else:
             lines.append(f"CONFIG_{kconfig_name}={kconfig_string(value)}")
     return "\n".join(lines) + "\n"

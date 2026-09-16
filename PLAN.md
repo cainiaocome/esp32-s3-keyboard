@@ -33,6 +33,10 @@ an explicit optional hardware path.
   including tool checks, formatting, lint, host tests, integration tests, and
   the ESP32-S3 firmware build. CI is configured to repeat these checks through
   both `docker run` and Docker Compose before pushing GHCR tags.
+- Wi-Fi PMF enforcement is configurable through `WIFI_PMF_REQUIRED`; the
+  compatibility default is `false` for WPA2 ISP routers without PMF, while
+  `true` restores strict Protected Management Frame enforcement. Configuration
+  tests and an ESP32-S3 build passed for the default compatibility path.
 - Shell wrappers are executable, and `scripts/bootstrap.sh` selects the pinned
   ESP-IDF Python interpreter when present. `Dockerfile.dev` exports that
   interpreter so `make bootstrap` has `pip` inside the development container.

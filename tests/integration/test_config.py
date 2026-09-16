@@ -25,12 +25,14 @@ def test_env_values_are_mapped_to_kconfig(tmp_path: Path) -> None:
         tmp_path,
         'WIFI_SSID="lab network"\n'
         "WIFI_PASSWORD=secret\n"
+        "WIFI_PMF_REQUIRED=false\n"
         "API_TOKEN=token-value\n"
         "KEY_HOLD_TIMEOUT_MS=12000\n"
         "KEY_PRESS_DURATION_MS=75\n",
     )
     assert 'CONFIG_REMOTE_HID_WIFI_SSID="lab network"' in generated
     assert 'CONFIG_REMOTE_HID_WIFI_PASSWORD="secret"' in generated
+    assert "CONFIG_REMOTE_HID_WIFI_PMF_REQUIRED=n" in generated
     assert 'CONFIG_REMOTE_HID_API_TOKEN="token-value"' in generated
     assert "CONFIG_REMOTE_HID_KEY_HOLD_TIMEOUT_MS=12000" in generated
     assert "CONFIG_REMOTE_HID_KEY_PRESS_DURATION_MS=75" in generated
@@ -46,6 +48,23 @@ def test_env_comments_and_kconfig_escaping(tmp_path: Path) -> None:
     )
     assert 'CONFIG_REMOTE_HID_WIFI_SSID="ssid\\\\name"' in generated
     assert 'CONFIG_REMOTE_HID_WIFI_PASSWORD="pass\\"word"' in generated
+
+
+def test_pmf_boolean_accepts_true_and_rejects_other_values(tmp_path: Path) -> None:
+    generated = run_generator(tmp_path, "WIFI_PMF_REQUIRED=true\n")
+    assert "CONFIG_REMOTE_HID_WIFI_PMF_REQUIRED=y" in generated
+
+    env_file = tmp_path / ".env"
+    output_file = tmp_path / "sdkconfig.defaults.local"
+    env_file.write_text("WIFI_PMF_REQUIRED=maybe\n", encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, str(GENERATOR), "--env-file", str(env_file), "--output", str(output_file)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "WIFI_PMF_REQUIRED must be true or false" in result.stderr
 
 
 def test_timing_ranges_fail_fast_and_output_is_private(tmp_path: Path) -> None:

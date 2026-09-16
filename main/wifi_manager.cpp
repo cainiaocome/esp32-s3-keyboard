@@ -69,7 +69,7 @@ bool WifiManager::start() {
     // minimum acceptable association for the bearer-token control channel.
     wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     wifi_config.sta.pmf_cfg.capable = true;
-    wifi_config.sta.pmf_cfg.required = true;
+    wifi_config.sta.pmf_cfg.required = config_.wifi_pmf_required;
 
     if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK ||
         esp_wifi_set_config(WIFI_IF_STA, &wifi_config) != ESP_OK || esp_wifi_start() != ESP_OK) {
@@ -77,7 +77,8 @@ bool WifiManager::start() {
         return false;
     }
     started_ = true;
-    ESP_LOGI(kTag, "Wi-Fi station starting");
+    ESP_LOGI(kTag, "Wi-Fi station starting (PMF required: %s)",
+             config_.wifi_pmf_required ? "yes" : "no");
     return true;
 }
 

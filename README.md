@@ -42,13 +42,17 @@ clang-format, and the pinned Python test dependencies. No `make bootstrap` step 
 are compiled into the firmware in this v1; they are never printed by the scripts or normal
 logs. Do not commit `.env`, `sdkconfig`, or `sdkconfig.defaults.local`.
 
+Set `WIFI_PMF_REQUIRED=true` in `.env` when using a router that supports 802.11w/PMF. The
+compatibility default is `false`.
+
 The API refuses to start unless `API_TOKEN` is configured. The default server is plain HTTP on
 port 80 and is intended for a trusted LAN only. Anyone who can observe that LAN traffic can
 capture the bearer token; do not expose the device directly to the Internet.
 
-The station refuses open networks and requires WPA2-or-stronger association with protected
-management frames. This reduces rogue-AP downgrade risk, but does not replace HTTPS on an
-untrusted network.
+The station refuses open networks and requires WPA2-or-stronger association. Set
+`WIFI_PMF_REQUIRED=true` to additionally require Protected Management Frames. PMF is optional
+by default for compatibility with ISP-managed WPA2 routers that do not support it. This does not
+replace HTTPS on an untrusted network.
 
 ## Docker development
 
