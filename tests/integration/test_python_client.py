@@ -154,6 +154,70 @@ def test_client_validates_inputs_without_network(http_server):
     assert requests == []
 
 
+def test_type_maps_printable_ascii_to_keys_and_shifted_combos():
+    client = RemoteHIDClient("http://device", "secret")
+    calls = []
+
+    def press(key, *, duration_ms=None):
+        calls.append(("press", key, duration_ms))
+
+    def combo(keys, *, duration_ms=None):
+        calls.append(("combo", list(keys), duration_ms))
+
+    client.press = press
+    client.combo = combo
+    client.type("aB 1!@#*_-+=[]\\;`,'./{}|:\"~<>?")
+
+    assert calls == [
+        ("press", "A", None),
+        ("combo", ["LEFT_SHIFT", "B"], None),
+        ("press", "SPACE", None),
+        ("press", "1", None),
+        ("combo", ["LEFT_SHIFT", "1"], None),
+        ("combo", ["LEFT_SHIFT", "2"], None),
+        ("combo", ["LEFT_SHIFT", "3"], None),
+        ("combo", ["LEFT_SHIFT", "8"], None),
+        ("combo", ["LEFT_SHIFT", "MINUS"], None),
+        ("press", "MINUS", None),
+        ("combo", ["LEFT_SHIFT", "EQUAL"], None),
+        ("press", "EQUAL", None),
+        ("press", "LEFT_BRACKET", None),
+        ("press", "RIGHT_BRACKET", None),
+        ("press", "BACKSLASH", None),
+        ("press", "SEMICOLON", None),
+        ("press", "GRAVE", None),
+        ("press", "COMMA", None),
+        ("press", "APOSTROPHE", None),
+        ("press", "DOT", None),
+        ("press", "SLASH", None),
+        ("combo", ["LEFT_SHIFT", "LEFT_BRACKET"], None),
+        ("combo", ["LEFT_SHIFT", "RIGHT_BRACKET"], None),
+        ("combo", ["LEFT_SHIFT", "BACKSLASH"], None),
+        ("combo", ["LEFT_SHIFT", "SEMICOLON"], None),
+        ("combo", ["LEFT_SHIFT", "APOSTROPHE"], None),
+        ("combo", ["LEFT_SHIFT", "GRAVE"], None),
+        ("combo", ["LEFT_SHIFT", "COMMA"], None),
+        ("combo", ["LEFT_SHIFT", "DOT"], None),
+        ("combo", ["LEFT_SHIFT", "SLASH"], None),
+    ]
+
+
+def test_type_validates_all_text_before_sending():
+    client = RemoteHIDClient("http://device", "secret")
+    calls = []
+    client.press = lambda key, *, duration_ms=None: calls.append(key)
+    client.combo = lambda keys, *, duration_ms=None: calls.append(keys)
+
+    with pytest.raises(ValueError, match="printable ASCII"):
+        client.type("valid\ntext")
+    with pytest.raises(ValueError, match="printable ASCII"):
+        client.type("valid é")
+    with pytest.raises(ValueError, match="text must be a string"):
+        client.type(None)
+
+    assert calls == []
+
+
 def test_client_validates_base_url_and_status_protocol(http_server):
     with pytest.raises(ValueError):
         RemoteHIDClient("ftp://device", "secret")

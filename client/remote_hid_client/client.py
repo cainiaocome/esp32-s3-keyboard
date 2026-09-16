@@ -18,6 +18,45 @@ from urllib.request import Request, urlopen
 _MAX_DURATION_MS = 1000
 _USER_AGENT = "esp32-s3-remote-hid-client/0.1"
 
+_UNSHIFTED_CHARACTER_KEYS = {
+    " ": "SPACE",
+    "`": "GRAVE",
+    "-": "MINUS",
+    "=": "EQUAL",
+    "[": "LEFT_BRACKET",
+    "]": "RIGHT_BRACKET",
+    "\\": "BACKSLASH",
+    ";": "SEMICOLON",
+    "'": "APOSTROPHE",
+    ",": "COMMA",
+    ".": "DOT",
+    "/": "SLASH",
+}
+
+_SHIFTED_CHARACTER_KEYS = {
+    "!": "1",
+    "@": "2",
+    "#": "3",
+    "$": "4",
+    "%": "5",
+    "^": "6",
+    "&": "7",
+    "*": "8",
+    "(": "9",
+    ")": "0",
+    "_": "MINUS",
+    "+": "EQUAL",
+    "{": "LEFT_BRACKET",
+    "}": "RIGHT_BRACKET",
+    "|": "BACKSLASH",
+    ":": "SEMICOLON",
+    '"': "APOSTROPHE",
+    "~": "GRAVE",
+    "<": "COMMA",
+    ">": "DOT",
+    "?": "SLASH",
+}
+
 
 class RemoteHIDError(RuntimeError):
     """An API request was rejected or returned an invalid API response.
@@ -98,6 +137,22 @@ def _validate_duration(duration_ms: int | None) -> None:
 def _validate_key(key: str) -> None:
     if not isinstance(key, str) or not key:
         raise ValueError("key must be a non-empty string")
+
+
+def _character_key(character: str) -> tuple[str, bool]:
+    """Return the HID key name and whether the character needs Shift."""
+
+    if "a" <= character <= "z":
+        return character.upper(), False
+    if "A" <= character <= "Z":
+        return character, True
+    if "0" <= character <= "9":
+        return character, False
+    if character in _UNSHIFTED_CHARACTER_KEYS:
+        return _UNSHIFTED_CHARACTER_KEYS[character], False
+    if character in _SHIFTED_CHARACTER_KEYS:
+        return _SHIFTED_CHARACTER_KEYS[character], True
+    raise ValueError("text must contain only printable ASCII characters")
 
 
 def _validate_combo(keys: Sequence[str]) -> list[str]:
@@ -184,6 +239,25 @@ class RemoteHIDClient:
         if duration_ms is not None:
             payload["duration_ms"] = duration_ms
         self._request("POST", "/api/v1/key/combo", payload)
+
+    def type(self, text: str, *, duration_ms: int | None = None) -> None:
+        """Press each printable ASCII character in ``text`` in sequence.
+
+        The mapping follows a standard US keyboard layout. Uppercase letters
+        and shifted punctuation are sent as ``LEFT_SHIFT`` combos. Characters
+        outside printable ASCII, including newlines and Unicode characters,
+        raise :class:`ValueError` before any request is sent.
+        """
+
+        if not isinstance(text, str):
+            raise ValueError("text must be a string of printable ASCII characters")
+        _validate_duration(duration_ms)
+        actions = [_character_key(character) for character in text]
+        for key, shifted in actions:
+            if shifted:
+                self.combo(["LEFT_SHIFT", key], duration_ms=duration_ms)
+            else:
+                self.press(key, duration_ms=duration_ms)
 
     def release_all(self) -> None:
         """Release every key currently held by the device."""

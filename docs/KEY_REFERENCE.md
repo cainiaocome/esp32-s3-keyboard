@@ -79,6 +79,18 @@ Use `combo` when the modifier and the key must be held together:
 client.combo(["LEFT_SHIFT", "SLASH"])
 ```
 
+For ordinary text, the Python client provides `type()` and performs this
+mapping automatically:
+
+```python
+client.type("ab*cd&")
+```
+
+`type()` accepts only printable ASCII characters. Uppercase letters and
+shifted symbols are sent as `LEFT_SHIFT` combos, and the mapping follows the
+standard US keyboard layout. It raises `ValueError` for newlines, Unicode, or
+other non-printable characters.
+
 The command-line helper sends independent `press` operations in sequence. It
 is suitable for direct key names such as `SLASH`, but use the Python client's
 `combo` method for shifted symbols.

@@ -17,7 +17,7 @@ an explicit optional hardware path.
 
 ## Validation
 
-- Host `make test`: passed using the g++ fallback (core) and pytest (17
+- Host `make test`: passed using the g++ fallback (core) and pytest (19
   non-hardware integration tests; 4 hardware tests deselected).
 - Development image: based on ESP-IDF `v6.1`, preinstalls all project tools
   and test dependencies, and is consumed by Compose from GHCR with branch and
@@ -57,6 +57,9 @@ an explicit optional hardware path.
   `esp32-s3-remote-hid-v1` marker without authentication, and bounded concurrent
   `find_device_ip(s)` helpers scan a caller-supplied LAN CIDR without exposing a
   chip/MAC-derived identifier.
+- Python text-entry follow-up complete: `RemoteHIDClient.type()` maps printable
+  ASCII text, including uppercase and shifted US-layout punctuation, to the
+  existing REST press/combo operations with client tests and documentation.
 
 ## Constraints / decisions
 

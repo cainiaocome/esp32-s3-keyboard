@@ -136,6 +136,7 @@ client.key_down("LEFT_CTRL")
 client.key_up("LEFT_CTRL")
 client.press("ENTER", duration_ms=75)
 client.combo(["LEFT_CTRL", "C"], duration_ms=50)
+client.type("ab*cd&")
 client.release_all()
 ```
 
@@ -148,12 +149,22 @@ client.release_all()
 | `key_up(key)` | `POST /api/v1/key/up` | Releases one key. |
 | `press(key, duration_ms=None)` | `POST /api/v1/key/press` | Presses one key and schedules release. |
 | `combo(keys, duration_ms=None)` | `POST /api/v1/key/combo` | Presses 1–6 keys and schedules release. |
+| `type(text, duration_ms=None)` | `press`/`combo` | Types printable ASCII text using a US keyboard mapping. |
 | `release_all()` | `POST /api/v1/key/release-all` | Releases all keys as a safety operation. |
 
 `duration_ms` is omitted when it is `None`, allowing the firmware default of
 50 ms. When provided, it must be an integer from 1 through 1000. A combo must
 contain 1 through 6 non-empty key names. The client does not maintain keyboard
 state locally; the device remains authoritative.
+
+`type(text)` accepts printable ASCII characters from space (`0x20`) through
+tilde (`0x7e`). It sends lowercase letters, digits, and unshifted punctuation
+with `press()`, and uses `LEFT_SHIFT` combos for uppercase letters and shifted
+symbols such as `*`, `&`, and `?`. The operation stops at the first device
+error. Characters outside printable ASCII, including newlines and Unicode,
+raise `ValueError` before any request is sent. The mapping follows a standard
+US keyboard layout; see [KEY_REFERENCE.md](KEY_REFERENCE.md) for the complete
+punctuation mapping.
 
 The firmware accepts canonical names such as `A`, `ENTER`, `F1`,
 `LEFT_CTRL`, and `KEYPAD_1`, is case-insensitive, and supports common aliases
