@@ -140,6 +140,11 @@ void test_combo_and_release_all() {
     expect(backend.reports.back() ==
                expected(modifier_bit(KeyCode::LEFT_CTRL), {key_usage(KeyCode::C)}),
            "combo report contains all keys");
+    const std::size_t reports_after_combo = backend.reports.size();
+    expect(engine.combo(combo.data(), combo.size()) == EngineResult::kOk,
+           "repeated combo succeeds");
+    expect(backend.reports.size() == reports_after_combo,
+           "repeated combo does not emit a duplicate report");
     clock.advance_ms(50);
     engine.tick();
     expect(backend.reports.back() == HidReport{}, "combo releases all members");
@@ -168,6 +173,29 @@ void test_combo_rollover_rolls_back_only_combo_keys() {
            "rejected combo emits no partial reports");
     expect(engine.is_pressed(KeyCode::LEFT_CTRL), "combo rollback preserves modifier");
     expect(!engine.is_pressed(KeyCode::F), "combo rollback removes first partial key");
+}
+
+void test_combo_backend_failure_and_retry() {
+    FakeClock clock;
+    FakeHidBackend backend;
+    KeyboardEngine engine(backend, clock);
+    const std::array<KeyCode, 2> combo = {KeyCode::LEFT_SHIFT, KeyCode::DIGIT_7};
+
+    backend.fail = true;
+    expect(engine.combo(combo.data(), combo.size()) == EngineResult::kBackendFailure,
+           "combo backend failure is returned");
+    expect(backend.reports.size() == 1, "failed combo attempts one complete report");
+    expect(engine.report() ==
+               expected(modifier_bit(KeyCode::LEFT_SHIFT), {key_usage(KeyCode::DIGIT_7)}),
+           "failed combo keeps the complete logical state");
+
+    backend.fail = false;
+    clock.advance_ms(10);
+    engine.tick();
+    expect(backend.reports.size() == 2, "failed combo is retried by maintenance tick");
+    expect(backend.reports.back() ==
+               expected(modifier_bit(KeyCode::LEFT_SHIFT), {key_usage(KeyCode::DIGIT_7)}),
+           "combo retry sends the complete report");
 }
 
 void test_timeout_and_invalid_input() {
@@ -266,6 +294,7 @@ int main() {
     test_modifiers_and_ctrl_c();
     test_combo_and_release_all();
     test_combo_rollover_rolls_back_only_combo_keys();
+    test_combo_backend_failure_and_retry();
     test_timeout_and_invalid_input();
     test_rollover_and_backend_failure();
     test_status_order_and_duration_validation();

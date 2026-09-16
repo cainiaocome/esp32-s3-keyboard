@@ -92,7 +92,7 @@ bool TinyUsbHidBackend::send_report(const HidReport& report) {
     std::copy(report.keys.begin(), report.keys.end(), keycodes);
     // The descriptor has no Report ID, so the report ID argument must be 0.
     for (int attempt = 0; attempt < kReportSendAttempts; ++attempt) {
-        if (!tud_mounted()) {
+        if (!tud_mounted() || tud_suspended()) {
             return false;
         }
         if (tud_hid_keyboard_report(0, report.modifiers, keycodes)) {

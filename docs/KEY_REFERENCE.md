@@ -87,9 +87,9 @@ client.type("ab*cd&")
 ```
 
 `type()` accepts only printable ASCII characters. Uppercase letters and
-shifted symbols are sent as `LEFT_SHIFT` combos, and the mapping follows the
-standard US keyboard layout. It raises `ValueError` for newlines, Unicode, or
-other non-printable characters.
+shifted symbols are sent with explicit `LEFT_SHIFT` and key transitions, and
+the mapping follows the standard US keyboard layout. It raises `ValueError`
+for newlines, Unicode, or other non-printable characters.
 
 The command-line helper sends independent `press` operations in sequence. It
 is suitable for direct key names such as `SLASH`, but use the Python client's

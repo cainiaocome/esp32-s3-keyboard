@@ -154,59 +154,121 @@ def test_client_validates_inputs_without_network(http_server):
     assert requests == []
 
 
-def test_type_maps_printable_ascii_to_keys_and_shifted_combos():
+def test_type_maps_printable_ascii_to_key_transitions():
     client = RemoteHIDClient("http://device", "secret")
     calls = []
 
-    def press(key, *, duration_ms=None):
-        calls.append(("press", key, duration_ms))
+    def key_down(key):
+        calls.append(("down", key))
 
-    def combo(keys, *, duration_ms=None):
-        calls.append(("combo", list(keys), duration_ms))
+    def key_up(key):
+        calls.append(("up", key))
 
-    client.press = press
-    client.combo = combo
+    client.key_down = key_down
+    client.key_up = key_up
     client.type("aB 1!@#*_-+=[]\\;`,'./{}|:\"~<>?")
 
     assert calls == [
-        ("press", "A", None),
-        ("combo", ["LEFT_SHIFT", "B"], None),
-        ("press", "SPACE", None),
-        ("press", "1", None),
-        ("combo", ["LEFT_SHIFT", "1"], None),
-        ("combo", ["LEFT_SHIFT", "2"], None),
-        ("combo", ["LEFT_SHIFT", "3"], None),
-        ("combo", ["LEFT_SHIFT", "8"], None),
-        ("combo", ["LEFT_SHIFT", "MINUS"], None),
-        ("press", "MINUS", None),
-        ("combo", ["LEFT_SHIFT", "EQUAL"], None),
-        ("press", "EQUAL", None),
-        ("press", "LEFT_BRACKET", None),
-        ("press", "RIGHT_BRACKET", None),
-        ("press", "BACKSLASH", None),
-        ("press", "SEMICOLON", None),
-        ("press", "GRAVE", None),
-        ("press", "COMMA", None),
-        ("press", "APOSTROPHE", None),
-        ("press", "DOT", None),
-        ("press", "SLASH", None),
-        ("combo", ["LEFT_SHIFT", "LEFT_BRACKET"], None),
-        ("combo", ["LEFT_SHIFT", "RIGHT_BRACKET"], None),
-        ("combo", ["LEFT_SHIFT", "BACKSLASH"], None),
-        ("combo", ["LEFT_SHIFT", "SEMICOLON"], None),
-        ("combo", ["LEFT_SHIFT", "APOSTROPHE"], None),
-        ("combo", ["LEFT_SHIFT", "GRAVE"], None),
-        ("combo", ["LEFT_SHIFT", "COMMA"], None),
-        ("combo", ["LEFT_SHIFT", "DOT"], None),
-        ("combo", ["LEFT_SHIFT", "SLASH"], None),
+        ("down", "A"),
+        ("up", "A"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "B"),
+        ("up", "B"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "SPACE"),
+        ("up", "SPACE"),
+        ("down", "1"),
+        ("up", "1"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "1"),
+        ("up", "1"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "2"),
+        ("up", "2"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "3"),
+        ("up", "3"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "8"),
+        ("up", "8"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "MINUS"),
+        ("up", "MINUS"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "MINUS"),
+        ("up", "MINUS"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "EQUAL"),
+        ("up", "EQUAL"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "EQUAL"),
+        ("up", "EQUAL"),
+        ("down", "LEFT_BRACKET"),
+        ("up", "LEFT_BRACKET"),
+        ("down", "RIGHT_BRACKET"),
+        ("up", "RIGHT_BRACKET"),
+        ("down", "BACKSLASH"),
+        ("up", "BACKSLASH"),
+        ("down", "SEMICOLON"),
+        ("up", "SEMICOLON"),
+        ("down", "GRAVE"),
+        ("up", "GRAVE"),
+        ("down", "COMMA"),
+        ("up", "COMMA"),
+        ("down", "APOSTROPHE"),
+        ("up", "APOSTROPHE"),
+        ("down", "DOT"),
+        ("up", "DOT"),
+        ("down", "SLASH"),
+        ("up", "SLASH"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "LEFT_BRACKET"),
+        ("up", "LEFT_BRACKET"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "RIGHT_BRACKET"),
+        ("up", "RIGHT_BRACKET"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "BACKSLASH"),
+        ("up", "BACKSLASH"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "SEMICOLON"),
+        ("up", "SEMICOLON"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "APOSTROPHE"),
+        ("up", "APOSTROPHE"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "GRAVE"),
+        ("up", "GRAVE"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "COMMA"),
+        ("up", "COMMA"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "DOT"),
+        ("up", "DOT"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "SLASH"),
+        ("up", "SLASH"),
+        ("up", "LEFT_SHIFT"),
     ]
 
 
 def test_type_validates_all_text_before_sending():
     client = RemoteHIDClient("http://device", "secret")
     calls = []
-    client.press = lambda key, *, duration_ms=None: calls.append(key)
-    client.combo = lambda keys, *, duration_ms=None: calls.append(keys)
+    client.key_down = lambda key: calls.append(("down", key))
+    client.key_up = lambda key: calls.append(("up", key))
 
     with pytest.raises(ValueError, match="printable ASCII"):
         client.type("valid\ntext")
@@ -216,6 +278,32 @@ def test_type_validates_all_text_before_sending():
         client.type(None)
 
     assert calls == []
+
+
+def test_type_preserves_repeated_characters_and_shift_boundaries():
+    client = RemoteHIDClient("http://device", "secret")
+    calls = []
+    client.key_down = lambda key: calls.append(("down", key))
+    client.key_up = lambda key: calls.append(("up", key))
+
+    client.type("Aa!!")
+
+    assert calls == [
+        ("down", "LEFT_SHIFT"),
+        ("down", "A"),
+        ("up", "A"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "A"),
+        ("up", "A"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "1"),
+        ("up", "1"),
+        ("up", "LEFT_SHIFT"),
+        ("down", "LEFT_SHIFT"),
+        ("down", "1"),
+        ("up", "1"),
+        ("up", "LEFT_SHIFT"),
+    ]
 
 
 def test_client_validates_base_url_and_status_protocol(http_server):

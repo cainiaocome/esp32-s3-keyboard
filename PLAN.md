@@ -17,7 +17,7 @@ an explicit optional hardware path.
 
 ## Validation
 
-- Host `make test`: passed using the g++ fallback (core) and pytest (19
+- Host `make test`: passed using the g++ fallback (core) and pytest (20
   non-hardware integration tests; 4 hardware tests deselected).
 - Development image: based on ESP-IDF `v6.1`, preinstalls all project tools
   and test dependencies, and is consumed by Compose from GHCR with branch and
@@ -59,13 +59,16 @@ an explicit optional hardware path.
   chip/MAC-derived identifier.
 - Python text-entry follow-up complete: `RemoteHIDClient.type()` maps printable
   ASCII text, including uppercase and shifted US-layout punctuation, to the
-  existing REST press/combo operations with client tests and documentation.
+  existing REST key transitions with client tests and documentation.
 - HID combo follow-up complete: combo state is assembled before transmission so
   each combo emits one complete report without an intermediate modifier-only
   report; unit tests cover atomic success and rollover rejection.
 - HID transport follow-up complete: the TinyUSB backend retries briefly across
   HID host polling intervals so rapid REST sequences do not fail on transient
   endpoint-busy responses.
+- Focused Claude review follow-up complete: corrected `type()` sequencing and
+  shifted-key cleanup, suspended-host retry handling, combo queue-full cleanup,
+  and added regression coverage for repeated characters and combo failures.
 
 ## Constraints / decisions
 

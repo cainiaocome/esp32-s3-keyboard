@@ -256,7 +256,9 @@ for REST, WebSocket, Wi-Fi, and maintenance-task concurrency; it never waits on 
 while holding that state lock. Normal key values are not logged.
 
 The USB backend retries a report briefly when the HID interrupt endpoint is transiently busy,
-which allows rapid sequences and combos to cross host polling intervals reliably. If an HID
-report still cannot be sent, the logical state remains authoritative and the maintenance task
-retries the complete current report until the backend accepts it. When the HID host attaches
-again, the firmware emits an empty recovery report before accepting normal operation.
+which allows rapid sequences and combos to cross host polling intervals reliably. This bounded
+retry can briefly hold the engine state mutex while it waits for the USB host; it performs no
+network I/O. If an HID report still cannot be sent, the logical state remains authoritative and
+the maintenance task retries the complete current report until the backend accepts it. When the
+HID host attaches again, the firmware emits an empty recovery report before accepting normal
+operation.

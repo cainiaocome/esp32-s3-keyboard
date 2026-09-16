@@ -8,6 +8,7 @@ package and is imported only when a WebSocket connection is opened.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 from urllib.error import HTTPError, URLError
@@ -244,7 +245,8 @@ class RemoteHIDClient:
         """Press each printable ASCII character in ``text`` in sequence.
 
         The mapping follows a standard US keyboard layout. Uppercase letters
-        and shifted punctuation are sent as ``LEFT_SHIFT`` combos. Characters
+        and shifted punctuation are sent with explicit ``LEFT_SHIFT`` and key
+        down/up events. Characters
         outside printable ASCII, including newlines and Unicode characters,
         raise :class:`ValueError` before any request is sent.
         """
@@ -255,9 +257,23 @@ class RemoteHIDClient:
         actions = [_character_key(character) for character in text]
         for key, shifted in actions:
             if shifted:
-                self.combo(["LEFT_SHIFT", key], duration_ms=duration_ms)
+                self.key_down("LEFT_SHIFT")
+                try:
+                    self.key_down(key)
+                    if duration_ms is not None:
+                        time.sleep(duration_ms / 1000)
+                finally:
+                    try:
+                        self.key_up(key)
+                    finally:
+                        self.key_up("LEFT_SHIFT")
             else:
-                self.press(key, duration_ms=duration_ms)
+                try:
+                    self.key_down(key)
+                    if duration_ms is not None:
+                        time.sleep(duration_ms / 1000)
+                finally:
+                    self.key_up(key)
 
     def release_all(self) -> None:
         """Release every key currently held by the device."""

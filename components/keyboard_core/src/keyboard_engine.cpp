@@ -210,7 +210,6 @@ EngineResult KeyboardEngine::combo(const KeyCode* keys, std::size_t count, uint6
                 cancel_pending_release_locked(newly_pressed[j]);
                 remove_key_locked(newly_pressed[j]);
             }
-            send_current_report_locked();
             return EngineResult::kQueueFull;
         }
     }
