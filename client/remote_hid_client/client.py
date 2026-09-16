@@ -17,6 +17,7 @@ from urllib.request import Request, urlopen
 
 
 _MAX_DURATION_MS = 1000
+_DEFAULT_TYPE_INTERVAL_MS = 50
 _USER_AGENT = "esp32-s3-remote-hid-client/0.1"
 
 _UNSHIFTED_CHARACTER_KEYS = {
@@ -135,6 +136,11 @@ def _validate_duration(duration_ms: int | None) -> None:
         raise ValueError("duration_ms must be an integer from 1 to 1000")
 
 
+def _validate_type_interval(interval_ms: int) -> None:
+    if type(interval_ms) is not int or not 0 <= interval_ms <= _MAX_DURATION_MS:
+        raise ValueError("interval_ms must be an integer from 0 to 1000")
+
+
 def _validate_key(key: str) -> None:
     if not isinstance(key, str) or not key:
         raise ValueError("key must be a non-empty string")
@@ -241,21 +247,31 @@ class RemoteHIDClient:
             payload["duration_ms"] = duration_ms
         self._request("POST", "/api/v1/key/combo", payload)
 
-    def type(self, text: str, *, duration_ms: int | None = None) -> None:
+    def type(
+        self,
+        text: str,
+        *,
+        duration_ms: int | None = None,
+        interval_ms: int = _DEFAULT_TYPE_INTERVAL_MS,
+    ) -> None:
         """Press each printable ASCII character in ``text`` in sequence.
 
         The mapping follows a standard US keyboard layout. Uppercase letters
         and shifted punctuation are sent with explicit ``LEFT_SHIFT`` and key
-        down/up events. Characters
-        outside printable ASCII, including newlines and Unicode characters,
-        raise :class:`ValueError` before any request is sent.
+        down/up events. Characters outside printable ASCII, including
+        newlines and Unicode characters, raise :class:`ValueError` before any
+        request is sent.
+
+        ``interval_ms`` is the pause between completed characters and defaults
+        to 50 ms. Set it to zero to disable the inter-character pause.
         """
 
         if not isinstance(text, str):
             raise ValueError("text must be a string of printable ASCII characters")
         _validate_duration(duration_ms)
+        _validate_type_interval(interval_ms)
         actions = [_character_key(character) for character in text]
-        for key, shifted in actions:
+        for index, (key, shifted) in enumerate(actions):
             if shifted:
                 self.key_down("LEFT_SHIFT")
                 try:
@@ -274,6 +290,9 @@ class RemoteHIDClient:
                         time.sleep(duration_ms / 1000)
                 finally:
                     self.key_up(key)
+
+            if index + 1 < len(actions) and interval_ms:
+                time.sleep(interval_ms / 1000)
 
     def release_all(self) -> None:
         """Release every key currently held by the device."""

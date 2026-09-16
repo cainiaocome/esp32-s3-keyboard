@@ -69,6 +69,9 @@ an explicit optional hardware path.
 - Focused Claude review follow-up complete: corrected `type()` sequencing and
   shifted-key cleanup, suspended-host retry handling, combo queue-full cleanup,
   and added regression coverage for repeated characters and combo failures.
+- Text-entry pacing follow-up complete: `RemoteHIDClient.type()` now has a
+  documented 50 ms default inter-character pause, with `interval_ms=0` as the
+  opt-out and client tests covering both paths.
 
 ## Constraints / decisions
 

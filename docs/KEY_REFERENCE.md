@@ -89,7 +89,8 @@ client.type("ab*cd&")
 `type()` accepts only printable ASCII characters. Uppercase letters and
 shifted symbols are sent with explicit `LEFT_SHIFT` and key transitions, and
 the mapping follows the standard US keyboard layout. It raises `ValueError`
-for newlines, Unicode, or other non-printable characters.
+for newlines, Unicode, or other non-printable characters. It waits 50 ms
+between characters by default; pass `interval_ms=0` to disable the pause.
 
 The command-line helper sends independent `press` operations in sequence. It
 is suitable for direct key names such as `SLASH`, but use the Python client's

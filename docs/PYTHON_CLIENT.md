@@ -149,7 +149,7 @@ client.release_all()
 | `key_up(key)` | `POST /api/v1/key/up` | Releases one key. |
 | `press(key, duration_ms=None)` | `POST /api/v1/key/press` | Presses one key and schedules release. |
 | `combo(keys, duration_ms=None)` | `POST /api/v1/key/combo` | Presses 1–6 keys and schedules release. |
-| `type(text, duration_ms=None)` | `key_down`/`key_up` | Types printable ASCII text using explicit key transitions and a US keyboard mapping. |
+| `type(text, duration_ms=None, interval_ms=50)` | `key_down`/`key_up` | Types printable ASCII text using explicit key transitions and a US keyboard mapping. |
 | `release_all()` | `POST /api/v1/key/release-all` | Releases all keys as a safety operation. |
 
 `duration_ms` is omitted when it is `None`, allowing the firmware default of
@@ -166,11 +166,13 @@ tilde (`0x7e`). It sends each character with explicit key-down/key-up events,
 and holds `LEFT_SHIFT` around uppercase letters and shifted symbols such as
 `*`, `&`, and `?`. If `duration_ms` is provided, it controls the hold time
 between each character's down and up events; otherwise the key is released as
-soon as the device accepts the down event. The operation stops at the first
-device error. Characters outside printable ASCII, including newlines and
-Unicode, raise `ValueError` before any request is sent. The mapping follows a
-standard US keyboard layout; see [KEY_REFERENCE.md](KEY_REFERENCE.md) for the
-complete punctuation mapping.
+soon as the device accepts the down event. By default, the client waits 50 ms
+between completed characters to accommodate Wi-Fi and USB polling timing. Set
+`interval_ms=0` to disable that pause; values from 0 through 1000 are
+accepted. The operation stops at the first device error. Characters outside
+printable ASCII, including newlines and Unicode, raise `ValueError` before any
+request is sent. The mapping follows a standard US keyboard layout; see
+[KEY_REFERENCE.md](KEY_REFERENCE.md) for the complete punctuation mapping.
 
 The firmware accepts canonical names such as `A`, `ENTER`, `F1`,
 `LEFT_CTRL`, and `KEYPAD_1`, is case-insensitive, and supports common aliases

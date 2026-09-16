@@ -154,9 +154,11 @@ def test_client_validates_inputs_without_network(http_server):
     assert requests == []
 
 
-def test_type_maps_printable_ascii_to_key_transitions():
+def test_type_maps_printable_ascii_to_key_transitions(monkeypatch):
     client = RemoteHIDClient("http://device", "secret")
     calls = []
+    sleeps = []
+    monkeypatch.setattr("remote_hid_client.client.time.sleep", sleeps.append)
 
     def key_down(key):
         calls.append(("down", key))
@@ -166,7 +168,8 @@ def test_type_maps_printable_ascii_to_key_transitions():
 
     client.key_down = key_down
     client.key_up = key_up
-    client.type("aB 1!@#*_-+=[]\\;`,'./{}|:\"~<>?")
+    text = "aB 1!@#*_-+=[]\\;`,'./{}|:\"~<>?"
+    client.type(text)
 
     assert calls == [
         ("down", "A"),
@@ -262,6 +265,7 @@ def test_type_maps_printable_ascii_to_key_transitions():
         ("up", "SLASH"),
         ("up", "LEFT_SHIFT"),
     ]
+    assert sleeps == [0.05] * (len(text) - 1)
 
 
 def test_type_validates_all_text_before_sending():
@@ -276,13 +280,19 @@ def test_type_validates_all_text_before_sending():
         client.type("valid é")
     with pytest.raises(ValueError, match="text must be a string"):
         client.type(None)
+    with pytest.raises(ValueError, match="interval_ms must be an integer"):
+        client.type("a", interval_ms=-1)
+    with pytest.raises(ValueError, match="interval_ms must be an integer"):
+        client.type("a", interval_ms=True)
 
     assert calls == []
 
 
-def test_type_preserves_repeated_characters_and_shift_boundaries():
+def test_type_preserves_repeated_characters_and_shift_boundaries(monkeypatch):
     client = RemoteHIDClient("http://device", "secret")
     calls = []
+    sleeps = []
+    monkeypatch.setattr("remote_hid_client.client.time.sleep", sleeps.append)
     client.key_down = lambda key: calls.append(("down", key))
     client.key_up = lambda key: calls.append(("up", key))
 
@@ -304,6 +314,19 @@ def test_type_preserves_repeated_characters_and_shift_boundaries():
         ("up", "1"),
         ("up", "LEFT_SHIFT"),
     ]
+    assert sleeps == [0.05] * 3
+
+
+def test_type_can_disable_inter_character_pause(monkeypatch):
+    client = RemoteHIDClient("http://device", "secret")
+    sleeps = []
+    monkeypatch.setattr("remote_hid_client.client.time.sleep", sleeps.append)
+    client.key_down = lambda _key: None
+    client.key_up = lambda _key: None
+
+    client.type("abc", interval_ms=0)
+
+    assert sleeps == []
 
 
 def test_client_validates_base_url_and_status_protocol(http_server):
