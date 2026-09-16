@@ -9,8 +9,9 @@ an explicit optional hardware path.
 ## State
 
 - Implemented: ESP-IDF project, keyboard core, USB adapter, Wi-Fi/REST/
-  WebSocket adapters, developer tooling, interactive Docker development shell,
-  CI, and optional hardware API tests.
+  WebSocket adapters, developer tooling, GHCR-backed interactive Docker
+  development environment, CI image validation/publication, and optional
+  hardware API tests.
 - Baseline: ESP-IDF `v6.1`; the official `tusb_hid` example uses
   `espressif/esp_tinyusb`; this project pins resolved version `2.3.0`.
 
@@ -18,8 +19,9 @@ an explicit optional hardware path.
 
 - Host `make test`: passed using the g++ fallback (core) and pytest (3
   non-hardware integration tests; 4 hardware tests deselected).
-- Pinned development image: built successfully and `make test` passed using
-  CMake (1 C++ test executable and 3 non-hardware integration tests).
+- Development image: based on ESP-IDF `v6.1`, preinstalls all project tools
+  and test dependencies, and is consumed by Compose from GHCR with branch and
+  short-SHA tags.
 - ESP-IDF `v6.1` target build: passed for ESP32-S3; generated image is within
   the 1 MiB factory partition.
 - clang-format was applied to all C/C++ sources in the development image.
@@ -27,6 +29,10 @@ an explicit optional hardware path.
   opens Bash in `/workspace`, and automatically adds the host `dialout` GID
   plus a detected serial device when one exists. The hardware overlay was also
   validated with `/dev/null` as a harmless device stand-in.
+- `scripts/test-container.sh` passed in the ESP-IDF development image,
+  including tool checks, formatting, lint, host tests, integration tests, and
+  the ESP32-S3 firmware build. CI is configured to repeat these checks through
+  both `docker run` and Docker Compose before pushing GHCR tags.
 - Shell wrappers are executable, and `scripts/bootstrap.sh` selects the pinned
   ESP-IDF Python interpreter when present. `Dockerfile.dev` exports that
   interpreter so `make bootstrap` has `pip` inside the development container.

@@ -22,14 +22,20 @@ the board layout.
 
 ## Quick start
 
-The normal development path needs no physical board:
+The published Docker Compose development environment is the default workflow. It needs no
+physical board for normal development:
 
 ```bash
 cp .env.example .env
 # Edit .env with a random API_TOKEN and the Wi-Fi credentials.
+make up
+# Inside the container shell:
 make test
 make build
 ```
+
+The development image is pre-bootstrapped with ESP-IDF, CMake, Ninja, the Xtensa toolchain,
+clang-format, and the pinned Python test dependencies. No `make bootstrap` step is required.
 
 `.env` is ignored. `make config` converts it to the ignored
 `sdkconfig.defaults.local`, which is passed as an additional ESP-IDF defaults file. Credentials
@@ -46,7 +52,9 @@ untrusted network.
 
 ## Docker development
 
-The pinned development image is `espressif/idf:v6.1`:
+The published development image is
+`ghcr.io/cainiaocome/esp32-s3-keyboard-dev:master`. `make up` pulls it, starts the Compose
+service, activates ESP-IDF in the interactive shell, and mounts the repository at `/workspace`:
 
 ```bash
 make up
@@ -57,8 +65,17 @@ docker compose run --rm dev make test
 docker compose run --rm dev make build
 ```
 
-Inside the pinned development container, `make bootstrap` uses the ESP-IDF Python environment,
-which includes `pip`; it does not depend on the system `/usr/bin/python3` package.
+Images are tagged with the branch name and a short commit SHA. Use a moving branch tag or pin an
+exact image version:
+
+```bash
+make up DEV_IMAGE=ghcr.io/cainiaocome/esp32-s3-keyboard-dev:master
+make up DEV_IMAGE=ghcr.io/cainiaocome/esp32-s3-keyboard-dev:sha-abcdef0
+```
+
+Branch names containing slashes are normalized to hyphens for Docker tags. If the GHCR package is
+private, authenticate Docker with a GitHub token that has `read:packages` before running `make up`.
+Do not put that token in the repository or firmware `.env` file.
 
 On a native Linux Docker host, `make up` automatically passes `/dev/ttyACM0` to the container
 when it exists. Select another device with `make up PORT=/dev/ttyUSB0`. The target also adds
@@ -93,14 +110,15 @@ the native port to the target computer for the final HID test.
 ## Commands
 
 ```text
-make bootstrap                         install Python test dependencies
+make bootstrap                         compatibility no-op; Docker is pre-bootstrapped
 make config                            generate ignored sdkconfig defaults from .env
 make up [PORT=/dev/ttyACM0]            start Docker dev stack and open a shell
 make down                              stop the Docker dev stack
-make build                             build firmware (ESP-IDF v6.1 required)
+make build                             build firmware inside the Docker shell
 make test                              host unit and non-hardware integration tests
 make test-unit                         C++ keyboard-core tests
 make test-integration                  Python configuration tests
+make test-container                    validate the complete Docker dev environment
 make flash PORT=/dev/ttyACM0           flash firmware
 make monitor PORT=/dev/ttyACM0         monitor firmware
 make test-hardware PORT=/dev/ttyACM0   optional reachable-device tests
@@ -108,8 +126,9 @@ make format                            clang-format check
 make lint                              Python syntax and host compile checks
 ```
 
-`make build` requires an active ESP-IDF v6.1 environment or the pinned Docker image. It does
-not require a board. `make test-hardware` expects a flashed board and a reachable API URL:
+`make build`, `make test`, `make format`, and `make lint` are intended to run inside the shell
+opened by `make up`; they do not require a board. `make test-hardware` expects a flashed board and
+a reachable API URL:
 
 ```bash
 REMOTE_HID_API_URL=http://192.168.1.42 \

@@ -853,7 +853,9 @@ pytest -m "not hardware"
 
 Codex is expected to run inside a Docker container.
 
-This is supported and should be a first-class development workflow.
+This is the canonical development workflow. The repository's published GHCR
+development image is used by Docker Compose; users should not need to build a
+local image or bootstrap dependencies after entering the container.
 
 ### 17.1 What Works Normally in Docker
 
@@ -869,14 +871,19 @@ The following should work without physical USB passthrough:
 - build release artifacts
 - inspect generated binaries and sizes
 
-Espressif publishes an official `espressif/idf` Docker image containing ESP-IDF, CMake, Ninja, toolchains, Python, and required build tooling. It is reasonable either to run Codex inside a container based on that image or install an exact ESP-IDF version in the existing Codex container.
+The project image is published as
+`ghcr.io/cainiaocome/esp32-s3-keyboard-dev`. Its `master` tag tracks the
+default branch, and `sha-<short-commit>` tags provide exact selection by
+commit. The image is built from a pinned official `espressif/idf` base and
+contains ESP-IDF, CMake, Ninja, toolchains, Python, clang-format, and the
+project's pinned test dependencies.
 
 ### 17.2 Preferred Container Setup
 
 If practical, base the project's development image on a pinned official ESP-IDF image:
 
 ```dockerfile
-FROM espressif/idf:v6.0.3
+FROM espressif/idf:v6.1
 ```
 
 The exact tag should match the version selected for this repository.
@@ -892,7 +899,8 @@ Install only additional project tools on top, for example:
 
 Do not duplicate the ESP toolchain unnecessarily.
 
-If the existing Codex container is not based on `espressif/idf`, `scripts/bootstrap.sh` should detect missing dependencies and install/setup ESP-IDF in a reproducible way.
+The image must be fully usable immediately after `make up`; a bootstrap step
+must not be required for build, test, format, lint, flash, or monitor commands.
 
 ### 17.3 Accessing the Real ESP32 From Docker on Linux
 
@@ -942,11 +950,14 @@ The repository must therefore not require USB access just to build or run normal
 
 ### 17.5 Required Separation
 
-The project should support:
+The project should support, from the shell opened by `make up`:
 
 ```bash
 make build
 make test
+make format
+make lint
+make test-container
 ```
 
 without hardware.
@@ -1021,15 +1032,20 @@ python-evdev
 
 Do not add these until the test implementation needs them.
 
-### 18.4 Bootstrap Script
+### 18.4 Published Development Image
 
-Provide:
+The development image is built and bootstrapped in CI. It must install and
+configure all dependencies needed by the commands above, including the
+ESP-IDF Python environment and pinned test requirements. Compose must consume
+the published image rather than building locally.
+
+An optional compatibility script may remain for host-side workflows:
 
 ```bash
 ./scripts/bootstrap.sh
 ```
 
-It should:
+If retained, it should:
 
 1. detect whether a usable ESP-IDF environment already exists
 2. install/configure the pinned version if missing, when feasible
@@ -1042,7 +1058,8 @@ It should be safe to run more than once.
 
 Do not make the bootstrap script silently replace a newer/different global ESP-IDF installation on the developer's host.
 
-Inside the project development container, it may manage the project environment more aggressively because that environment is disposable.
+It is not part of the canonical container workflow and must not be required
+for normal development.
 
 ---
 
@@ -1053,12 +1070,14 @@ Provide simple top-level commands.
 Minimum:
 
 ```text
-make bootstrap
+make up
+make down
 make build
 make clean
 make test
 make test-unit
 make test-integration
+make test-container
 make flash PORT=/dev/ttyACM0
 make monitor PORT=/dev/ttyACM0
 make test-hardware PORT=/dev/ttyACM0
@@ -1066,7 +1085,9 @@ make format
 make lint
 ```
 
-`make test` must not require hardware.
+`make test` must not require hardware. `make up` must pull the configured
+published image, activate ESP-IDF in its interactive shell, and mount the
+repository at `/workspace`.
 
 `make build && make test` should be the standard Codex validation loop.
 
@@ -1224,10 +1245,10 @@ Codex should implement in small validated steps.
 ### Milestone 1 — Repository and Build
 
 - ESP-IDF project boots on ESP32-S3
-- pinned development environment
+- pinned published development image
 - Docker development workflow
 - `make build`
-- CI build
+- CI build, container tests, Compose tests, and GHCR publication
 
 ### Milestone 2 — Hardware-Independent Keyboard Core
 
@@ -1296,6 +1317,11 @@ non-hardware integration tests
 ESP-IDF firmware build
 ```
 
+For every push, CI must also build the development image, run its complete
+container test suite, validate the Docker Compose workflow, and only then
+publish branch-name and short-commit tags to GHCR. Pull requests run the
+tests but do not publish images.
+
 A separate optional self-hosted workflow may run HIL tests if a physical ESP32-S3 is attached.
 
 Do not make GitHub-hosted CI depend on a real ESP32.
@@ -1309,6 +1335,10 @@ Store no Wi-Fi or API secrets in public CI configuration.
 The first release is complete when all of the following are true:
 
 - Firmware builds reproducibly in the documented Docker/Codex environment.
+- `make up` pulls a published GHCR image and opens a ready-to-use ESP-IDF shell.
+- No bootstrap command is required for any normal development command.
+- CI validates the image and Compose workflow before publishing branch and
+  short-commit tags.
 - ESP32-S3 enumerates as a USB HID keyboard on a normal host.
 - ESP32 joins configured Wi-Fi.
 - Authenticated status endpoint works.

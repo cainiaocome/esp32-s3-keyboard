@@ -24,3 +24,97 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash -lc 'source /opt/esp/idf/export.sh && make build'
+
+  container-image:
+    needs: [host-tests, firmware-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image tags
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_name="ghcr.io/${GITHUB_REPOSITORY,,}-dev"
+          branch_tag="$(printf '%s' "$GITHUB_REF_NAME" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9_.-]+/-/g; s/^[.-]+//; s/[.-]+$//')"
+          if [[ -z "$branch_tag" ]]; then
+            branch_tag="ref-${GITHUB_SHA:0:7}"
+          fi
+          branch_tag="${branch_tag:0:120}"
+          short_sha="${GITHUB_SHA:0:7}"
+          local_image="${image_name}:ci-${short_sha}"
+          {
+            echo "image_name=${image_name}"
+            echo "branch_tag=${branch_tag}"
+            echo "sha_tag=sha-${short_sha}"
+            echo "local_image=${local_image}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build image for validation
+        env:
+          LOCAL_IMAGE: ${{ steps.image.outputs.local_image }}
+        run: |
+          set -euo pipefail
+          docker build --pull \
+            --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.version=${GITHUB_REF_NAME}" \
+            --tag "$LOCAL_IMAGE" \
+            --file Dockerfile.dev .
+
+      - name: Test image tools and project workflow
+        env:
+          LOCAL_IMAGE: ${{ steps.image.outputs.local_image }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --env IDF_TARGET=esp32s3 \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            "$LOCAL_IMAGE" \
+            bash -lc '
+              set -euo pipefail
+              ./scripts/test-container.sh
+            '
+
+      - name: Test Compose development workflow
+        env:
+          DEV_IMAGE: ${{ steps.image.outputs.local_image }}
+        run: |
+          set -euo pipefail
+          trap 'docker compose down --remove-orphans' EXIT
+          docker compose config --quiet
+          docker compose up --pull never -d
+          docker compose exec -T dev bash -lc '
+            set -euo pipefail
+            source /opt/esp/idf/export.sh
+            ./scripts/test-container.sh
+          '
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish branch and pinned image tags
+        if: github.event_name == 'push'
+        env:
+          IMAGE_NAME: ${{ steps.image.outputs.image_name }}
+          BRANCH_TAG: ${{ steps.image.outputs.branch_tag }}
+          SHA_TAG: ${{ steps.image.outputs.sha_tag }}
+          LOCAL_IMAGE: ${{ steps.image.outputs.local_image }}
+        run: |
+          set -euo pipefail
+          docker tag "$LOCAL_IMAGE" "${IMAGE_NAME}:${BRANCH_TAG}"
+          docker tag "$LOCAL_IMAGE" "${IMAGE_NAME}:${SHA_TAG}"
+          docker push "${IMAGE_NAME}:${BRANCH_TAG}"
+          docker push "${IMAGE_NAME}:${SHA_TAG}"

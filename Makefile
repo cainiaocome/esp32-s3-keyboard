@@ -10,6 +10,8 @@ PORT ?= /dev/ttyACM0
 REMOTE_HID_DEVICE ?= $(PORT)
 DIALOUT_GID ?= $(shell getent group dialout 2>/dev/null | cut -d: -f3)
 COMPOSE ?= docker compose
+DEV_IMAGE ?= ghcr.io/cainiaocome/esp32-s3-keyboard-dev:master
+COMPOSE_PULL ?= always
 
 SDKCONFIG_DEFAULTS = sdkconfig.defaults$(if $(wildcard $(LOCAL_SDKCONFIG)),;$(LOCAL_SDKCONFIG))
 
@@ -17,20 +19,22 @@ export IDF_TARGET
 export SDKCONFIG_DEFAULTS
 export REMOTE_HID_DEVICE
 export DIALOUT_GID
+export DEV_IMAGE
 
 .PHONY: help bootstrap config build clean test test-unit test-integration \
-        up down flash monitor test-hardware format lint
+        test-container up down flash monitor test-hardware format lint
 
 help:
 	@echo "ESP32-S3 Remote HID"
-	@echo "  make bootstrap                         install Python test dependencies"
+	@echo "  make bootstrap                         compatibility no-op (Docker is pre-bootstrapped)"
 	@echo "  make config                            generate ignored sdkconfig defaults from .env"
 	@echo "  make up [PORT=/dev/ttyACM0]            start Docker dev stack and open a shell"
 	@echo "  make down                              stop the Docker dev stack"
-	@echo "  make build                             build firmware (ESP-IDF required)"
+	@echo "  make build                             build firmware (run inside make up shell)"
 	@echo "  make test                              run all non-hardware tests"
 	@echo "  make test-unit                         run C++ keyboard-core tests"
 	@echo "  make test-integration                  run Python integration tests"
+	@echo "  make test-container                    validate the complete Docker dev environment"
 	@echo "  make flash PORT=/dev/ttyACM0           flash firmware"
 	@echo "  make monitor PORT=/dev/ttyACM0         monitor firmware"
 	@echo "  make test-hardware PORT=/dev/ttyACM0   run optional HIL tests"
@@ -38,7 +42,8 @@ help:
 	@echo "  make lint                              run lightweight static checks"
 
 bootstrap:
-	./scripts/bootstrap.sh
+	@echo "The published Docker development image is already bootstrapped; no action is required."
+	@echo "Run 'make up' to enter the canonical development environment."
 
 config:
 	@if [[ -f "$(ENV_FILE)" ]]; then \
@@ -48,7 +53,7 @@ config:
 	fi
 
 build: config
-	@command -v $(IDF_PY) >/dev/null || { echo "idf.py not found. Run make bootstrap or use Docker; see README.md." >&2; exit 1; }
+	@command -v $(IDF_PY) >/dev/null || { echo "idf.py not found. Run 'make up' and build inside the Docker shell." >&2; exit 1; }
 	$(IDF_PY) build
 
 clean:
@@ -76,6 +81,9 @@ test-unit:
 test-integration:
 	$(IDF_PYTHON) -m pytest -m "not hardware"
 
+test-container:
+	./scripts/test-container.sh
+
 up:
 	@set -e; \
 	compose_files="-f compose.yaml"; \
@@ -85,8 +93,9 @@ up:
 	else \
 		echo "$(REMOTE_HID_DEVICE) is not present; starting a build/test-only container."; \
 	fi; \
-	$(COMPOSE) $$compose_files up --build --pull always -d; \
-	$(COMPOSE) $$compose_files exec dev bash
+	if [[ "$(COMPOSE_PULL)" != "never" ]]; then $(COMPOSE) $$compose_files pull; fi; \
+	$(COMPOSE) $$compose_files up --pull "$(COMPOSE_PULL)" -d; \
+	$(COMPOSE) $$compose_files exec dev bash -lc 'source /opt/esp/idf/export.sh && exec bash'
 
 down:
 	$(COMPOSE) down

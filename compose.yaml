@@ -1,8 +1,7 @@
 services:
   dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: "${DEV_IMAGE:-ghcr.io/cainiaocome/esp32-s3-keyboard-dev:master}"
+    pull_policy: always
     working_dir: /workspace
     volumes:
       - .:/workspace
