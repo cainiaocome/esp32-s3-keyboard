@@ -24,6 +24,7 @@ namespace {
 
 constexpr char kTag[] = "remote_hid_http";
 constexpr char kSuccessJson[] = "{\"ok\":true}";
+constexpr char kDeviceType[] = "esp32-s3-remote-hid";
 constexpr char kBearerPrefix[] = "Bearer ";
 constexpr std::size_t kMaxAuthorizationHeader = 512;
 
@@ -103,9 +104,10 @@ bool json_string(cJSON* root, const char* name, const char*& value) {
 } // namespace
 
 HttpServer::HttpServer(KeyboardEngine& keyboard, const char* api_token,
-                       StatusProvider status_provider, void* status_context)
+                       StatusProvider status_provider, void* status_context,
+                       const char* discovery_id)
     : keyboard_(keyboard), api_token_(api_token), status_provider_(status_provider),
-      status_context_(status_context) {}
+      status_context_(status_context), discovery_id_(discovery_id) {}
 
 HttpServer::~HttpServer() { stop(); }
 
@@ -119,7 +121,7 @@ bool HttpServer::start() {
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 8;
+    config.max_uri_handlers = 9;
     config.stack_size = 8192;
     config.global_user_ctx = this;
     config.global_user_ctx_free_fn = &HttpServer::free_global_context;
@@ -129,6 +131,12 @@ bool HttpServer::start() {
         server_ = nullptr;
         return false;
     }
+
+    httpd_uri_t discovery_uri = {};
+    discovery_uri.uri = "/api/v1/discovery";
+    discovery_uri.method = HTTP_GET;
+    discovery_uri.handler = &HttpServer::handle_discovery;
+    discovery_uri.user_ctx = this;
 
     httpd_uri_t status_uri = {};
     status_uri.uri = "/api/v1/status";
@@ -165,6 +173,12 @@ bool HttpServer::start() {
     combo_uri.method = HTTP_POST;
     combo_uri.handler = &HttpServer::handle_combo;
     combo_uri.user_ctx = this;
+
+    if (httpd_register_uri_handler(server_, &discovery_uri) != ESP_OK) {
+        ESP_LOGE(kTag, "Failed to register HTTP discovery route");
+        stop();
+        return false;
+    }
 
     const httpd_uri_t* routes[] = {&status_uri, &down_uri,    &up_uri,
                                    &press_uri,  &release_uri, &combo_uri};
@@ -254,6 +268,10 @@ void HttpServer::session_close(httpd_handle_t handle, int socket_fd) {
 
 void HttpServer::free_global_context(void* context) { (void)context; }
 
+esp_err_t HttpServer::handle_discovery(httpd_req_t* req) {
+    return static_cast<HttpServer*>(req->user_ctx)->discovery(req);
+}
+
 bool HttpServer::authorized(httpd_req_t* req) const {
     const size_t header_length = httpd_req_get_hdr_value_len(req, "Authorization");
     if (header_length <= sizeof(kBearerPrefix) - 1 || header_length > kMaxAuthorizationHeader) {
@@ -277,6 +295,28 @@ bool HttpServer::require_authorized(httpd_req_t* req) const {
     httpd_resp_set_hdr(req, "WWW-Authenticate", "Bearer");
     send_error(req, 401, "unauthorized", "A valid Bearer token is required");
     return false;
+}
+
+esp_err_t HttpServer::discovery(httpd_req_t* req) {
+    cJSON* response = cJSON_CreateObject();
+    if (!response || !discovery_id_) {
+        cJSON_Delete(response);
+        send_error(req, 500, "internal_error", "Unable to allocate discovery response");
+        return ESP_OK;
+    }
+    cJSON_AddBoolToObject(response, "ok", true);
+    cJSON_AddStringToObject(response, "device_type", kDeviceType);
+    cJSON_AddStringToObject(response, "discovery_id", discovery_id_);
+    char* payload = cJSON_PrintUnformatted(response);
+    cJSON_Delete(response);
+    if (!payload) {
+        send_error(req, 500, "internal_error", "Unable to serialize discovery response");
+        return ESP_OK;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, payload, HTTPD_RESP_USE_STRLEN);
+    cJSON_free(payload);
+    return ESP_OK;
 }
 
 bool HttpServer::read_json(httpd_req_t* req, cJSON*& root) const {

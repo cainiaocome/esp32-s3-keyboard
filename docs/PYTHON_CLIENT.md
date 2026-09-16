@@ -38,6 +38,57 @@ The installable package, its `pyproject.toml`, and the debug helper are kept
 together under `client/`; the repository root does not contain Python package
 metadata.
 
+## Find the device on a LAN
+
+The firmware exposes a read-only discovery endpoint:
+
+```http
+GET /api/v1/discovery
+```
+
+It does not require the API token, because the client must be able to locate
+the device before it can make authenticated requests. A matching response has
+the fixed marker:
+
+```json
+{"ok":true,"device_type":"esp32-s3-remote-hid","discovery_id":"esp32-s3-remote-hid-v1"}
+```
+
+The marker identifies this project, not one specific board. No chip ID or MAC
+address is exposed. If multiple boards are on the same LAN, use
+`find_device_ips()` and choose the intended address by your network setup.
+
+```python
+from remote_hid_client import find_device_ip, find_device_ips
+
+matches = find_device_ips("192.178.2.0/24")
+print(matches)  # e.g. ["192.178.2.37"]
+
+ip = find_device_ip("192.178.2.0/24")
+if ip is None:
+    raise RuntimeError("Remote HID device was not found")
+print(f"Remote HID device: {ip}")
+```
+
+The scanner probes only usable addresses inside the supplied CIDR, uses up to
+64 concurrent requests, and defaults to a 250 ms timeout per address. HTTP
+failures, timeouts, malformed JSON, and non-matching devices are ignored. The
+default safety limit is 4096 hosts; change it explicitly only when a larger
+scan is intentional:
+
+```python
+ip = find_device_ip(
+    "192.178.2.0/24",
+    timeout=0.5,
+    max_workers=32,
+)
+```
+
+The default port is 80. A different port can be supplied with `port=` when
+the device is behind a test proxy. Discovery is intentionally lightweight but
+unauthenticated, so it reveals that a Remote HID device is present to other
+clients on the LAN. It cannot control the keyboard or reveal the API token.
+
 ## Device configuration
 
 The firmware must be flashed with a non-empty `API_TOKEN`. The URL passed to

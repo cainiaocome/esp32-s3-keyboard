@@ -8,6 +8,13 @@ from .client import (
     RemoteHIDWebSocket,
     StatusSnapshot,
 )
+from .discovery import (
+    DISCOVERY_DEVICE_TYPE,
+    DISCOVERY_ID,
+    DISCOVERY_PATH,
+    find_device_ip,
+    find_device_ips,
+)
 
 __all__ = [
     "RemoteHIDClient",
@@ -16,4 +23,9 @@ __all__ = [
     "RemoteHIDProtocolError",
     "RemoteHIDWebSocket",
     "StatusSnapshot",
+    "DISCOVERY_DEVICE_TYPE",
+    "DISCOVERY_ID",
+    "DISCOVERY_PATH",
+    "find_device_ip",
+    "find_device_ips",
 ]

@@ -9,15 +9,15 @@ an explicit optional hardware path.
 ## State
 
 - Implemented: ESP-IDF project, keyboard core, USB adapter, Wi-Fi/REST/
-  WebSocket adapters, developer tooling, GHCR-backed interactive Docker
-  development environment, CI image validation/publication, optional hardware
-  API tests, and a supported Python REST/WebSocket client.
+  WebSocket adapters, fixed-marker LAN discovery, developer tooling, GHCR-backed
+  interactive Docker development environment, CI image validation/publication,
+  optional hardware API tests, and a supported Python REST/WebSocket client.
 - Baseline: ESP-IDF `v6.1`; the official `tusb_hid` example uses
   `espressif/esp_tinyusb`; this project pins resolved version `2.3.0`.
 
 ## Validation
 
-- Host `make test`: passed using the g++ fallback (core) and pytest (13
+- Host `make test`: passed using the g++ fallback (core) and pytest (16
   non-hardware integration tests; 4 hardware tests deselected).
 - Development image: based on ESP-IDF `v6.1`, preinstalls all project tools
   and test dependencies, and is consumed by Compose from GHCR with branch and
@@ -53,6 +53,10 @@ an explicit optional hardware path.
 - Client organization follow-up complete: moved package metadata, library, and
   debug sequence helper under `client/`; updated Makefile/CI package paths and
   added `client/send_keys.py` plus the `remote-hid-send` console entry point.
+- Discovery follow-up complete: `/api/v1/discovery` returns the fixed
+  `esp32-s3-remote-hid-v1` marker without authentication, and bounded concurrent
+  `find_device_ip(s)` helpers scan a caller-supplied LAN CIDR without exposing a
+  chip/MAC-derived identifier.
 
 ## Constraints / decisions
 

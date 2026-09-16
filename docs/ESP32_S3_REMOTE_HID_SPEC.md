@@ -461,7 +461,9 @@ On Wi-Fi disconnect:
 
 ## 9. REST API
 
-Use JSON requests and responses.
+Use JSON requests and responses. The read-only discovery route is the only
+unauthenticated REST endpoint; all status and keyboard-control routes require
+the bearer token.
 
 Version the API from the beginning:
 
@@ -469,7 +471,30 @@ Version the API from the beginning:
 /api/v1/...
 ```
 
-### 9.1 Status
+### 9.1 Discovery
+
+Provide a lightweight endpoint that allows a client to identify this project
+while scanning a known LAN before it knows the API token:
+
+```http
+GET /api/v1/discovery
+```
+
+The response uses a fixed, versioned marker and must not expose credentials,
+keyboard state, or a chip/MAC identifier:
+
+```json
+{
+  "ok": true,
+  "device_type": "esp32-s3-remote-hid",
+  "discovery_id": "esp32-s3-remote-hid-v1"
+}
+```
+
+The marker identifies the firmware project, not an individual board. A client
+must handle zero, one, or multiple matching addresses.
+
+### 9.2 Status
 
 ```http
 GET /api/v1/status
@@ -489,7 +514,7 @@ Example response:
 
 Do not expose Wi-Fi passwords or API tokens.
 
-### 9.2 Key Down
+### 9.3 Key Down
 
 ```http
 POST /api/v1/key/down
@@ -501,7 +526,7 @@ Content-Type: application/json
 }
 ```
 
-### 9.3 Key Up
+### 9.4 Key Up
 
 ```http
 POST /api/v1/key/up
@@ -513,7 +538,7 @@ Content-Type: application/json
 }
 ```
 
-### 9.4 Key Press
+### 9.5 Key Press
 
 ```http
 POST /api/v1/key/press
@@ -528,14 +553,14 @@ Content-Type: application/json
 
 `duration_ms` should be optional and restricted to a sensible range.
 
-### 9.5 Release All
+### 9.6 Release All
 
 ```http
 POST /api/v1/key/release-all
 Authorization: Bearer <token>
 ```
 
-### 9.6 Combo
+### 9.7 Combo
 
 Optional but recommended in v1:
 
@@ -559,7 +584,7 @@ Semantics:
 
 Avoid implementing arbitrary long macro execution in the first release.
 
-### 9.7 Text Typing
+### 9.8 Text Typing
 
 `/text` is useful but should be considered optional for v1 because text-to-keyboard conversion depends on keyboard layout.
 
@@ -579,7 +604,7 @@ Initially support a documented US-English keyboard layout only.
 
 Do not claim Unicode support unless it is actually implemented.
 
-### 9.8 Error Format
+### 9.9 Error Format
 
 Use consistent JSON errors:
 
@@ -632,7 +657,11 @@ For v1, keeping WebSocket control effectively single-owner is acceptable and sim
 
 ## 11. Authentication and Network Safety
 
-This project controls a physical keyboard and therefore should not expose an unauthenticated API by default.
+This project controls a physical keyboard and therefore should not expose an
+unauthenticated control API by default. The read-only `/api/v1/discovery`
+endpoint is an explicit exception so clients can locate the device before
+authentication; it must not expose credentials, keyboard state, or a chip/MAC
+identifier.
 
 Minimum v1 protection:
 

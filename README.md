@@ -151,7 +151,23 @@ For a ready-to-use Python interface instead of constructing HTTP requests
 manually, see [`docs/PYTHON_CLIENT.md`](docs/PYTHON_CLIENT.md). The client
 package and debug helper live under `client/`.
 
-All API routes require:
+The read-only discovery route is intentionally unauthenticated so a client can
+find the device before it knows the API token:
+
+```http
+GET /api/v1/discovery
+```
+
+It returns a fixed project marker and no credentials or keyboard state:
+
+```json
+{"ok":true,"device_type":"esp32-s3-remote-hid","discovery_id":"esp32-s3-remote-hid-v1"}
+```
+
+The Python client can scan a known LAN for that exact marker; see
+[`docs/PYTHON_CLIENT.md`](docs/PYTHON_CLIENT.md#find-the-device-on-a-lan).
+
+All control and status routes require:
 
 ```http
 Authorization: Bearer <API_TOKEN>

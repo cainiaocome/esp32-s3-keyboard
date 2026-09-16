@@ -10,6 +10,8 @@ from remote_hid_client import (
     RemoteHIDConnectionError,
     RemoteHIDError,
     RemoteHIDProtocolError,
+    find_device_ip,
+    find_device_ips,
 )
 from remote_hid_client import cli
 
@@ -44,6 +46,16 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._record()
+        if self.path in {"/prefix/api/v1/discovery", "/api/v1/discovery"}:
+            self._response(
+                200,
+                {
+                    "ok": True,
+                    "device_type": "esp32-s3-remote-hid",
+                    "discovery_id": "esp32-s3-remote-hid-v1",
+                },
+            )
+            return
         if self.path == "/prefix/api/v1/status":
             self._response(
                 200,
@@ -176,6 +188,59 @@ def test_status_protocol_errors_are_reported(http_server):
         client = RemoteHIDClient(f"http://127.0.0.1:{server.server_port}", "secret")
         with pytest.raises(RemoteHIDProtocolError):
             client.status()
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_discovery_finds_matching_device_without_authentication():
+    ApiHandler.requests = []
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ApiHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        cidr = "127.0.0.0/30"
+        matches = find_device_ips(
+            cidr,
+            port=server.server_port,
+            timeout=0.2,
+            max_workers=4,
+        )
+        assert matches == ["127.0.0.1"]
+        assert find_device_ip(cidr, port=server.server_port, timeout=0.2) == "127.0.0.1"
+    finally:
+        server.shutdown()
+        thread.join()
+    assert ApiHandler.requests
+    assert all(request["authorization"] is None for request in ApiHandler.requests)
+
+
+def test_discovery_validates_cidr_and_large_scans():
+    with pytest.raises(ValueError, match="invalid LAN CIDR"):
+        find_device_ips("not-a-cidr")
+    with pytest.raises(ValueError, match="refusing to scan"):
+        find_device_ips("192.178.0.0/16")
+
+
+def test_discovery_ignores_a_nonmatching_http_service():
+    class WrongHandler(ApiHandler):
+        def do_GET(self):
+            self._record()
+            self._response(
+                200,
+                {"ok": True, "device_type": "other-device", "discovery_id": "other-v1"},
+            )
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), WrongHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        assert find_device_ips(
+            "127.0.0.0/30",
+            port=server.server_port,
+            timeout=0.2,
+            max_workers=4,
+        ) == []
     finally:
         server.shutdown()
         thread.join()

@@ -21,7 +21,7 @@ using StatusProvider = StatusSnapshot (*)(void* context);
 class HttpServer final {
   public:
     HttpServer(KeyboardEngine& keyboard, const char* api_token, StatusProvider status_provider,
-               void* status_context);
+               void* status_context, const char* discovery_id);
     ~HttpServer();
 
     bool start();
@@ -31,6 +31,7 @@ class HttpServer final {
     static constexpr std::size_t kMaxRequestBody = 1024;
     static constexpr uint64_t kMaxDurationMs = 1000;
 
+    static esp_err_t handle_discovery(httpd_req_t* req);
     static esp_err_t handle_status(httpd_req_t* req);
     static esp_err_t handle_key_down(httpd_req_t* req);
     static esp_err_t handle_key_up(httpd_req_t* req);
@@ -42,6 +43,7 @@ class HttpServer final {
     static void session_close(httpd_handle_t handle, int socket_fd);
     static void free_global_context(void* context);
 
+    esp_err_t discovery(httpd_req_t* req);
     esp_err_t status(httpd_req_t* req);
     esp_err_t key_action(httpd_req_t* req, bool down);
     esp_err_t key_press(httpd_req_t* req);
@@ -65,6 +67,7 @@ class HttpServer final {
     const char* api_token_;
     StatusProvider status_provider_;
     void* status_context_;
+    const char* discovery_id_;
     httpd_handle_t server_ = nullptr;
 };
 

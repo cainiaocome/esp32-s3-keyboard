@@ -15,6 +15,7 @@ namespace remote_hid {
 namespace {
 
 constexpr char kTag[] = "remote_hid_app";
+constexpr char kDiscoveryId[] = "esp32-s3-remote-hid-v1";
 
 class EspTimerClock final : public Clock {
   public:
@@ -27,6 +28,7 @@ struct Runtime {
     TinyUsbHidBackend usb;
     KeyboardEngine keyboard;
     WifiManager wifi;
+    const char* discovery_id = kDiscoveryId;
     HttpServer http;
 
     Runtime()
@@ -34,7 +36,7 @@ struct Runtime {
               usb, clock,
               KeyboardEngineConfig{config.key_hold_timeout_ms, config.key_press_duration_ms, 1000}),
           wifi(config, keyboard),
-          http(keyboard, config.api_token, &Runtime::status_provider, this) {}
+          http(keyboard, config.api_token, &Runtime::status_provider, this, discovery_id) {}
 
     static StatusSnapshot status_provider(void* context) {
         auto* runtime = static_cast<Runtime*>(context);
