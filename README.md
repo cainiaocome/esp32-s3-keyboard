@@ -151,6 +151,10 @@ For a ready-to-use Python interface instead of constructing HTTP requests
 manually, see [`docs/PYTHON_CLIENT.md`](docs/PYTHON_CLIENT.md). The client
 package and debug helper live under `client/`.
 
+See [`docs/KEY_REFERENCE.md`](docs/KEY_REFERENCE.md) for the complete list of
+special characters, non-alphanumeric keys, modifiers, keypad keys, and shifted
+symbol combinations.
+
 The read-only discovery route is intentionally unauthenticated so a client can
 find the device before it knows the API token:
 

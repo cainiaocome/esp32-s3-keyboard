@@ -157,8 +157,10 @@ state locally; the device remains authoritative.
 
 The firmware accepts canonical names such as `A`, `ENTER`, `F1`,
 `LEFT_CTRL`, and `KEYPAD_1`, is case-insensitive, and supports common aliases
-such as `CTRL`, `SHIFT`, `ALT`, `CMD`, `WIN`, and `WINDOWS`. See the [REST API
-section in the README](../README.md#rest-api) for the complete key-family
+such as `CTRL`, `SHIFT`, `ALT`, `CMD`, `WIN`, and `WINDOWS`. See the [special
+character and key reference](KEY_REFERENCE.md) for the complete list of
+non-alphanumeric keys, punctuation mappings, and shifted-symbol examples. The
+[REST API section in the README](../README.md#rest-api) contains the protocol
 summary.
 
 ## WebSocket usage
