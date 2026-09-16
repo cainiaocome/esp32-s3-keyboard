@@ -17,7 +17,7 @@ an explicit optional hardware path.
 
 ## Validation
 
-- Host `make test`: passed using the g++ fallback (core) and pytest (16
+- Host `make test`: passed using the g++ fallback (core) and pytest (17
   non-hardware integration tests; 4 hardware tests deselected).
 - Development image: based on ESP-IDF `v6.1`, preinstalls all project tools
   and test dependencies, and is consumed by Compose from GHCR with branch and

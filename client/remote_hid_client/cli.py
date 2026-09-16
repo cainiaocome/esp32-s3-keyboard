@@ -9,6 +9,7 @@ import time
 from typing import Sequence
 
 from .client import RemoteHIDClient, RemoteHIDError
+from .discovery import find_device_ip
 
 
 def _base_url(ip: str) -> str:
@@ -24,10 +25,14 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Send a sequence of one-key presses to an ESP32-S3 Remote HID device."
     )
-    parser.add_argument(
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument(
+        "--cidr",
+        help="LAN CIDR to scan for the ESP32, for example 192.178.2.0/24",
+    )
+    target.add_argument(
         "--ip",
-        required=True,
-        help="ESP32 host or IP address, for example 192.168.1.42",
+        help="ESP32 host or IP address; bypasses discovery",
     )
     parser.add_argument(
         "--token",
@@ -52,6 +57,12 @@ def _parser() -> argparse.ArgumentParser:
         default=5.0,
         help="per-request timeout in seconds (default: 5)",
     )
+    parser.add_argument(
+        "--discovery-timeout",
+        type=float,
+        default=0.25,
+        help="per-address discovery timeout in seconds (default: 0.25)",
+    )
     parser.add_argument("keys", nargs="+", help="key names to press in order")
     return parser
 
@@ -68,7 +79,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("provide --token, REMOTE_HID_API_TOKEN, or API_TOKEN")
 
     try:
-        base_url = _base_url(args.ip)
+        if args.cidr:
+            ip = find_device_ip(args.cidr, timeout=args.discovery_timeout)
+            if ip is None:
+                raise ValueError(f"no Remote HID device found in {args.cidr}")
+            print(f"Discovered Remote HID device at {ip}")
+        else:
+            ip = args.ip
+        base_url = _base_url(ip)
         client = RemoteHIDClient(base_url, token, timeout=args.timeout)
         print(f"Sending {len(args.keys)} key press(es) to {base_url}...")
         for index, key in enumerate(args.keys):

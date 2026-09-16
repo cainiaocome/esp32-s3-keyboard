@@ -286,12 +286,13 @@ checking the network/API path without writing a Python program. The token is
 read from `REMOTE_HID_API_TOKEN` first, then `API_TOKEN`, or can be supplied
 with `--token`.
 
-From the repository root, without installing the package:
+From the repository root, without installing the package, specify the LAN
+CIDR rather than the board's individual IP address:
 
 ```bash
 REMOTE_HID_API_TOKEN="$API_TOKEN" \
 python client/send_keys.py \
-  --ip 192.168.1.42 \
+  --cidr 192.178.2.0/24 \
   ENTER A B
 ```
 
@@ -299,7 +300,7 @@ After installing the client, the equivalent console command is:
 
 ```bash
 REMOTE_HID_API_TOKEN="$API_TOKEN" \
-remote-hid-send --ip 192.168.1.42 ENTER A B
+remote-hid-send --cidr 192.178.2.0/24 ENTER A B
 ```
 
 Useful options:
@@ -307,6 +308,8 @@ Useful options:
 - `--duration-ms 75` overrides the device's default press duration;
 - `--delay-ms 100` waits between each press command;
 - `--timeout 10` changes the per-request timeout;
+- `--discovery-timeout 0.5` changes the per-address discovery timeout;
+- `--ip 192.178.2.37` bypasses discovery when an address is already known;
 - `--token VALUE` supplies the token directly, though an environment variable
   avoids putting it in shell history.
 
@@ -314,7 +317,7 @@ Example with an explicit interval:
 
 ```bash
 python client/send_keys.py \
-  --ip 192.168.1.42 \
+  --cidr 192.178.2.0/24 \
   --duration-ms 75 \
   --delay-ms 100 \
   F1 F2 F3

@@ -281,6 +281,27 @@ def test_debug_helper_sends_keys_in_order(monkeypatch, capsys):
     assert "secret" not in capsys.readouterr().out
 
 
+def test_debug_helper_discovers_ip_from_cidr(monkeypatch, capsys):
+    calls = []
+
+    class FakeClient:
+        def __init__(self, base_url, token, *, timeout):
+            calls.append(("init", base_url, token, timeout))
+
+        def press(self, key, *, duration_ms=None):
+            calls.append(("press", key, duration_ms))
+
+    monkeypatch.setattr(cli, "find_device_ip", lambda cidr, **kwargs: "192.178.2.37")
+    monkeypatch.setattr(cli, "RemoteHIDClient", FakeClient)
+    assert cli.main(["--cidr", "192.178.2.0/24", "--token", "secret", "ENTER"]) == 0
+
+    assert calls == [
+        ("init", "http://192.178.2.37", "secret", 5.0),
+        ("press", "ENTER", None),
+    ]
+    assert "192.178.2.37" in capsys.readouterr().out
+
+
 def test_websocket_commands_and_authentication():
     websockets = pytest.importorskip("websockets")
     from websockets.asyncio.server import serve
