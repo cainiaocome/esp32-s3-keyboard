@@ -11,7 +11,7 @@ an explicit optional hardware path.
 - Implemented: ESP-IDF project, keyboard core, USB adapter, Wi-Fi/REST/
   WebSocket adapters, developer tooling, CI, and optional hardware API tests.
 - Baseline: ESP-IDF `v6.1`; the official `tusb_hid` example uses
-  `espressif/esp_tinyusb` `^2.0.1~1`.
+  `espressif/esp_tinyusb`; this project pins resolved version `2.3.0`.
 
 ## Validation
 
